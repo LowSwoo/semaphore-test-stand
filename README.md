@@ -2,15 +2,15 @@
 
 Terraform-based test stands for [Semaphore UI](https://semaphoreui.com). They
 spin up reproducible Semaphore environments for end-to-end testing — from
-configuring resources inside a single instance to provisioning full multi-cloud
-clusters from scratch.
+configuring resources inside a single instance to provisioning a full cloud
+cluster from scratch.
 
 The repo is split into two independent stands that operate at different layers:
 
-| Stand                | Layer          | What it does                                                                                                                            | Docs                            |
-| -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
-| [`stand1`](stand1)   | Application    | Configures resources *inside* a running Semaphore instance — projects, keys, repositories, inventories, environments, and templates.  | [stand1/README.md](stand1/README.md) |
-| [`stand2`](stand2)   | Infrastructure | Provisions a complete Semaphore UI *cluster* (load balancer + UI nodes + PostgreSQL + Redis + runners) on a cloud provider.            | [stand2/README.md](stand2/README.md) |
+| Stand                | Layer          | What it does                                                                                                                           | Docs                                 |
+| -------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| [`stand1`](stand1)   | Application    | Configures resources *inside* a running Semaphore instance — projects, keys, repositories, inventories, environments, and templates.    | [stand1/README.md](stand1/README.md) |
+| [`stand2`](stand2)   | Infrastructure | Provisions a complete Semaphore UI *cluster* (load balancer + UI nodes + PostgreSQL + Redis + runners) on DigitalOcean.                  | [stand2/README.md](stand2/README.md) |
 
 The two are independent: `stand1` targets any reachable Semaphore API (typically
 a local instance), while `stand2` stands up the cloud infrastructure that
@@ -37,66 +37,71 @@ list of resources.
 
 ## stand2 — Cluster infrastructure
 
-Provisions the same Semaphore UI cluster topology — a load balancer fronting
+Provisions a Semaphore UI cluster on **DigitalOcean**: a load balancer fronting
 several stateless UI nodes that share one PostgreSQL database and one Redis
-instance, plus a pool of runners — on two cloud providers. Each provider has a
-`server` stack (the cluster) and a `runner` stack (the task runners). Nodes are
-configured at boot through cloud-init templates shared across providers.
+instance, plus a pool of runners. The deployment is split into two Terraform
+root modules — [`server/`](stand2/do/server) (the cluster) and
+[`runner/`](stand2/do/runner) (the task runners) — driven by wrapper scripts in
+[`stand2/do/`](stand2/do). Nodes are configured at boot through the cloud-init
+templates in [`stand2/shared/`](stand2/shared).
 
-| Provider                                         | Stacks                                                       | Docs                                                |
-| ------------------------------------------------ | ----------------------------------------------------------- | --------------------------------------------------- |
-| DigitalOcean ([`do/`](stand2/do))                | [`server/`](stand2/do/server), [`runner/`](stand2/do/runner)   | [stand2/do/server/README.md](stand2/do/server/README.md) |
-| Google Cloud ([`gcp/`](stand2/gcp))              | [`server/`](stand2/gcp/server), [`runner/`](stand2/gcp/runner) | [stand2/gcp/server/README.md](stand2/gcp/server/README.md) |
+DNS and TLS are handled by **Cloudflare**: the load balancer is published as a
+proxied `<name>-lb.<parent_domain>` record in the Cloudflare-hosted parent
+zone, so TLS terminates at the Cloudflare edge with its certificate and no
+certificates are managed on the provider side.
 
-Both variants terminate TLS at the load balancer with a managed certificate and
-use Cloudflare `NS` delegation to a provider-hosted sub-zone for DNS. Shared
-configuration (cloud-init templates, the runner service/config, and common
-variables) lives in [`stand2/shared/`](stand2/shared).
-
-Each stack is configured through `TF_VAR_*` environment variables sourced from
-the shared `.env` files rather than per-stack `.tfvars`:
+Several independent stands can run from the same code: each stand is a
+Terraform **workspace**, configured by a directory in
+[`workspaces/`](workspaces) (see [workspaces/README.md](workspaces/README.md)).
+Credentials and shared settings come from `stand2/.env` (`TF_VAR_*` variables)
+rather than per-stack `.tfvars`:
 
 ```sh
-cd stand2/gcp/server                                   # or do/server, */runner
-gcloud auth application-default login                  # GCP auth (DO uses a token)
-set -a; source ../../shared/.env; source ../../shared/.env.gcp; set +a
-terraform init
-terraform apply
+cd stand2
+cp .env.example .env                   # fill in tokens, passwords, keys
+cp -r ../workspaces/example ../workspaces/test1   # per-stand config.yml
+
+cd do
+./up.sh test1                          # apply server, wait for API, apply runner
+./down.sh test1                        # destroy everything
 ```
 
-See [stand2/shared/README.md](stand2/shared/README.md) for the `.env` layout and
-the per-stack READMEs for provider-specific details.
+`down_servers.sh` / `down_runners.sh` tear down the two halves separately;
+`down_servers.sh` keeps the Cloudflare records so a later `up.sh` reuses them.
+See [stand2/README.md](stand2/README.md) and
+[stand2/do/server/README.md](stand2/do/server/README.md) for details.
 
 ## Repository layout
 
 ```
 .
 ├── stand1/                 # Semaphore resources via the semaphoreui provider
-└── stand2/                 # Cloud cluster infrastructure
-    ├── do/                 # DigitalOcean variant
-    │   ├── server/         #   load balancer + UI cluster + Postgres + Redis
-    │   └── runner/         #   task runners
-    ├── gcp/                # Google Cloud variant
-    │   ├── server/
-    │   └── runner/
-    └── shared/             # cloud-init templates, runner config, shared .env
+├── stand2/                 # Cloud cluster infrastructure
+│   ├── .env.example        #   TF_VAR_* credentials/settings template
+│   ├── do/                 #   DigitalOcean deployment
+│   │   ├── server/         #     load balancer + UI cluster + Postgres + Redis
+│   │   ├── runner/         #     task runners
+│   │   └── up.sh, down*.sh #     wrapper scripts (take a workspace name)
+│   └── shared/             #   cloud-init templates and runner config
+└── workspaces/             # per-stand config (one dir per Terraform workspace)
+    └── example/            #   committed template — copy to start a new stand
 ```
 
 ## Prerequisites
 
-- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.0
+- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5
 - For `stand1`: a reachable Semaphore instance and an API token
 - For `stand2`:
-  - A cloud account and credentials — DigitalOcean token, or
-    [`gcloud`](https://cloud.google.com/sdk/docs/install) with
-    `gcloud auth application-default login`
-  - A Cloudflare API token (DNS edit + zone read) for the parent domain used in
-    certificate delegation
+  - A DigitalOcean API token and an SSH key uploaded to DigitalOcean (the
+    matching key loaded in your `ssh-agent` — Terraform connects over SSH to
+    mint the admin token)
+  - A Cloudflare API token (DNS edit + zone read) for the parent domain
 
 ## Secrets
 
 This is a **test stand** — secrets are passed to nodes via cloud-init and stored
-in local files. State files, `*.tfvars`, generated tokens, and `shared/.env*`
-are git-ignored (see [.gitignore](.gitignore)); only the `*.example` templates
+in local files. State files, `*.tfvars`, `.env*`, generated tokens, and the
+per-stand `workspaces/` directories are git-ignored (see
+[.gitignore](.gitignore)); only `*.example` templates and `workspaces/example/`
 are committed. Copy them and fill in your own values. For production, use a
 secrets manager and restrict SSH source IPs in the firewall configuration.
