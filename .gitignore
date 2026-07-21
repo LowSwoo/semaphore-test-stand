@@ -13,3 +13,4 @@ admin.token
 .env.*
 !*.example
 /workspaces/**/
+!/workspaces/example/

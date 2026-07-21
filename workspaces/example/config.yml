@@ -1,0 +1,10 @@
+runners:
+  delta:
+    name: delta
+    runner_executor_type: docker
+
+cluster_ip_range: 10.10.13.0/24
+runners_ip_range: 10.10.12.0/24
+subscription_key: 75b1875e-...
+cluster: 3
+ha_disabled: false
