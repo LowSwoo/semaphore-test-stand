@@ -8,7 +8,7 @@ if [[ -n "$1" ]]; then
 fi
 
 TARGETS=("${(@f)$(terraform state list |
-  grep -v -E 'cloudflare_zone|digitalocean_certificate|digitalocean_domain|cloudflare_record' |
+  grep -v -E 'cloudflare_' |
   sed 's/^/-target=/'
 )}")
 

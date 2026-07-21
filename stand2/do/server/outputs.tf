@@ -8,13 +8,8 @@ output "semaphore_url" {
   value       = local.web_root
 }
 
-output "delegated_zone" {
-  description = "Sub-zone to delegate to DigitalOcean nameservers via NS records in the parent domain."
-  value       = local.dns_zone
-}
-
 output "load_balancer_ip" {
-  description = "Public IP of the load balancer (HTTPS :443, HTTP :80 redirects)."
+  description = "Public IP of the load balancer (HTTP :80, fronted by the Cloudflare proxy)."
   value       = digitalocean_loadbalancer.main.ip
 }
 

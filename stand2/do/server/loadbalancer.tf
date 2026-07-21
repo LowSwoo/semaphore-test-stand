@@ -6,15 +6,12 @@ resource "digitalocean_loadbalancer" "main" {
   # Route the 3 Semaphore UI droplets behind the LB via their shared tag.
   droplet_tag = digitalocean_tag.ui.name
 
-  # Terminate TLS at the LB; forward plain HTTP to Semaphore on :3000.
-  redirect_http_to_https = true
-
+  # TLS terminates at the Cloudflare edge; the LB only speaks plain HTTP.
   forwarding_rule {
-    entry_protocol   = "https"
-    entry_port       = 443
-    target_protocol  = "http"
-    target_port      = 3000
-    certificate_name = digitalocean_certificate.main.name
+    entry_protocol  = "http"
+    entry_port      = 80
+    target_protocol = "http"
+    target_port     = 3000
   }
 
   healthcheck {

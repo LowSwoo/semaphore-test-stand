@@ -16,7 +16,6 @@ resource "digitalocean_project_resources" "main" {
       digitalocean_droplet.postgres.urn,
       digitalocean_droplet.redis.urn,
       digitalocean_loadbalancer.main.urn,
-      digitalocean_domain.main.urn,
     ],
   )
 }

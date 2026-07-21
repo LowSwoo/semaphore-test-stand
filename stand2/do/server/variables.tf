@@ -27,7 +27,7 @@ variable "region" {
 }
 
 variable "parent_domain" {
-  description = "Parent domain hosted in Cloudflare (e.g. semaphoreui.dev). The '<prefix>.<parent_domain>' sub-zone is delegated to DigitalOcean nameservers."
+  description = "Parent domain hosted in Cloudflare (e.g. semaphoreui.dev). The LB is published as a proxied '<prefix>-lb.<parent_domain>' record in this zone."
   type        = string
 }
 

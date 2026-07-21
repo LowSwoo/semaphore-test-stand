@@ -9,7 +9,7 @@ provider.
 
 | Resource              | Count | Size          | Notes                                             |
 | --------------------- | ----- | ------------- | ------------------------------------------------- |
-| Load balancer         | 1     | regional      | HTTPS `:443` → cluster `:3000`, HTTP→HTTPS redirect |
+| Load balancer         | 1     | regional      | HTTP `:80` → cluster `:3000`, TLS at Cloudflare edge |
 | Semaphore UI cluster  | 3     | `s-1vcpu-2gb` | Behind the LB (see *Zones* below)                 |
 | Semaphore runners     | 3     | `s-1vcpu-2gb` | Execute tasks, reach the cluster via the LB       |
 | PostgreSQL            | 1     | `s-1vcpu-2gb` | Shared database for the cluster                   |
@@ -19,36 +19,29 @@ All droplets join one VPC (`10.10.10.0/24`). A DigitalOcean Cloud Firewall
 allows SSH and `:3000` from anywhere, Postgres/Redis only from the VPC, and all
 egress.
 
-### TLS / SSL (subdomain delegation)
+### TLS / SSL (Cloudflare proxy)
 
-The load balancer terminates TLS with a DigitalOcean-managed **Let's Encrypt**
-certificate and redirects HTTP→HTTPS. The hostnames are derived from
-`local.prefix` + `var.parent_domain`:
+TLS terminates at the **Cloudflare edge** with the zone's universal
+certificate; the load balancer itself only serves plain HTTP. Terraform
+([cloudflare.tf](cloudflare.tf)) creates in the Cloudflare-hosted parent zone:
 
-- Delegated DO zone: `<prefix>.<parent_domain>` (e.g. `stand2.semaphoreui.dev`)
-- LB hostname / cert: `<lb_subdomain>.<prefix>.<parent_domain>`
-  (e.g. `lb.stand2.semaphoreui.dev`)
+1. A **proxied** `A` record `<prefix>-lb.<parent_domain>`
+   (e.g. `stand2-lb.semaphoreui.dev`) pointing at the load balancer IP.
+   Proxying enables Cloudflare caching and its edge certificate.
+2. A page rule pinning SSL mode **flexible** for that hostname, so Cloudflare
+   reaches the origin over HTTP `:80` regardless of the zone-wide SSL setting.
 
-The parent domain (`semaphoreui.dev`) stays hosted on **Cloudflare**. Terraform
-manages the whole delegation automatically ([cloudflare.tf](cloudflare.tf)):
+The hostname is flat (`<prefix>-lb.`) because Cloudflare's universal
+certificate only covers first-level subdomains — nested names like
+`lb.<prefix>.<parent_domain>` would need a paid certificate.
 
-1. `digitalocean_domain` creates the `<prefix>.<parent_domain>` sub-zone in
-   DigitalOcean.
-2. `cloudflare_record` adds three `NS` records on the `<prefix>` label in the
-   Cloudflare parent zone, pointing at DigitalOcean's nameservers
-   (`ns1/ns2/ns3.digitalocean.com`).
-3. Once delegation propagates, DigitalOcean issues the Let's Encrypt cert and
-   the LB serves `https://lb.<prefix>.<parent_domain>`.
+This needs a `cloudflare_api_token` with **DNS edit**, **page rules edit** and
+**zone read** on the parent domain. Semaphore and the runners are configured
+with `web_host = https://<prefix>-lb.<parent_domain>` so redirects, cookies and
+runner registration work over TLS.
 
-This needs a `cloudflare_api_token` with **DNS edit** + **zone read** on the
-parent domain. Semaphore and the runners are configured with
-`web_host = https://<lb_fqdn>` so redirects, cookies and runner registration
-work over TLS.
-
-> **Note:** Let's Encrypt validation can't succeed until the NS delegation has
-> propagated. On a cold `terraform apply` the certificate may report `pending`;
-> re-run `terraform apply` (or `terraform apply -replace=digitalocean_certificate.main`)
-> after delegation is live.
+> **Note:** the Cloudflare free plan allows only 3 page rules per zone, and
+> each workspace consumes one.
 
 ### Zones
 
