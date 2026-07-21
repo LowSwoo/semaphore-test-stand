@@ -12,4 +12,4 @@ admin.token
 .env
 .env.*
 !*.example
-/keys
+/workspaces/**/

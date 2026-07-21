@@ -1,9 +1,13 @@
+set -e
+
 set -a; source ../.env; set +a
 
 cd server
 
+terraform init -input=false > /dev/null
+
 if [[ -n "$1" ]]; then
-  terraform workspace select $1
+  terraform workspace select -or-create $1
 fi
 
 terraform apply -auto-approve
@@ -26,8 +30,10 @@ cd ..
 
 cd runner
 
+terraform init -input=false > /dev/null
+
 if [[ -n "$1" ]]; then
-  terraform workspace select $1
+  terraform workspace select -or-create $1
 fi
 
 terraform apply -auto-approve

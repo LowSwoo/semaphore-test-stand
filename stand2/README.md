@@ -10,7 +10,6 @@ The same topology is provided for two cloud providers — pick one:
 | Variant       | Provider      | Directory   | Docs                          |
 | ------------- | ------------- | ----------- | ----------------------------- |
 | DigitalOcean  | `digitalocean`| [`do/`](do) | [do/README.md](do/README.md)  |
-| Hetzner Cloud | `hcloud`      | [`hz/`](hz) | [hz/README.md](hz/README.md)  |
 
 ## Topology
 
@@ -30,7 +29,7 @@ lets them act as one cluster against the shared database.
 
 ## Software provisioning (cloud-init)
 
-Each role boots from a dedicated cloud-init template under `<variant>/cloud-init/`:
+Each role boots from a dedicated cloud-init template under `shared/cloud-init/`:
 
 - **postgres** — installs PostgreSQL, binds to its private IP, creates the
   Semaphore database/user, allows access from the private network.
@@ -42,12 +41,11 @@ Each role boots from a dedicated cloud-init template under `<variant>/cloud-init
 
 ## Quick start
 
+### Create .env
+
 ```sh
-cd do        # or: cd hz
-cp terraform.tfvars.example terraform.tfvars   # fill in token, ssh key, secrets
-terraform init
-terraform plan
-terraform apply
+cd do
+cp .env.example .env
 ```
 
 Generate the shared cluster encryption key once and reuse it across nodes:
@@ -56,25 +54,32 @@ Generate the shared cluster encryption key once and reuse it across nodes:
 head -c32 /dev/urandom | base64
 ```
 
-After apply, open the load balancer address from the Terraform outputs and log
-in with the `semaphore_admin_*` credentials.
-
-## Differences between variants
-
-- **DigitalOcean (`do/`)** — single region (DigitalOcean has no availability
-  zones); LB terminates TLS with a managed Let's Encrypt certificate via
-  subdomain delegation (DO sub-zone + Cloudflare `NS` records). See
-  [do/README.md](do/README.md).
-- **Hetzner (`hz/`)** — 3 cluster nodes spread across 3 locations in the
-  `eu-central` network zone; Postgres and Redis are IPv6-only to stay within the
-  IPv4 quota. See [hz/README.md](hz/README.md).
-
-> Secrets are passed via cloud-init `user_data`. This is a test stand — for
-> production use a secrets manager and restrict SSH source IPs in the firewall
-> config.
-
-## Environment variables
+### Create workspace
 
 ```sh
-set -a; source .env; set +a
+cd ..
+cd workspaces
+mkdir test1
+```
+
+Create `config.yml`:
+
+```yml
+runners:
+  delta:
+    name: delta
+    runner_executor_type: docker
+
+cluster_ip_range: 10.10.13.0/24
+runners_ip_range: 10.10.12.0/24
+subscription_key: 75b1875e-df08-4b38-9ab0-23b4c2ba9a69
+cluster: 3
+ha_disabled: false
+```
+
+### Create infrastructure
+
+```sh
+cd do
+./up test1
 ```
