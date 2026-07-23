@@ -7,7 +7,7 @@ resource "semaphoreui_project_key" "semaphore_test_stand" {
   name       = "semaphore_test_stand"
 
   ssh = {
-    private_key = file("${path.module}/../../semaphore_test_stand")
+    private_key = file("${path.module}/../workspaces/default/id_rsa")
     passphrase  = "123456"
   }
 }
@@ -99,6 +99,42 @@ resource "semaphoreui_project_template" "multiple_vault_passwords" {
       name = "vault2"
       password = {
         vault_key_id = semaphoreui_project_key.vault_2.id
+      }
+    },
+  ]
+}
+
+resource "semaphoreui_project_template" "survey_variables" {
+  project_id     = semaphoreui_project.test_1.id
+  environment_id = semaphoreui_project_environment.default.id
+  inventory_id   = semaphoreui_project_inventory.localhost.id
+  repository_id  = semaphoreui_project_repository.semaphore_test_stand.id
+  name           = "survey-vars"
+  app            = "bash"
+  playbook       = "survey-vars/run-test.sh"
+
+  survey_vars = [
+    {
+      name  = "app_version"
+      title = "App version"
+      type     = "string"
+      required = true
+    },
+    {
+      name  = "secret_key"
+      title = "Secret key"
+      type  = "secret"
+      required = true
+    },
+    {
+      name  = "target_env"
+      title = "Target environment"
+      type  = "enum"
+      required = true
+      enum_values = {
+        "Dev" = "dev"
+        "Staging" = "staging"
+        "Production" = "prod"
       }
     },
   ]

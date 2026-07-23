@@ -105,3 +105,11 @@ per-stand `workspaces/` directories are git-ignored (see
 [.gitignore](.gitignore)); only `*.example` templates and `workspaces/example/`
 are committed. Copy them and fill in your own values. For production, use a
 secrets manager and restrict SSH source IPs in the firewall configuration.
+
+## Domain access troubleshooting
+
+On MacOS you should refresh your DNS cache:
+
+```
+sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder
+```
