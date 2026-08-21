@@ -8,7 +8,7 @@ resource "semaphoreui_project_key" "semaphore_test_stand" {
 
   ssh = {
     private_key = file("${path.module}/../workspaces/default/id_rsa")
-    passphrase  = "123456"
+    # passphrase  = "123456"
   }
 }
 

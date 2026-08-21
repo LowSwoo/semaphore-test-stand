@@ -4,7 +4,7 @@ set -a; source ../.env; set +a
 cd server
 
 if [[ -n "$1" ]]; then
-  terraform workspace select $1
+  terraform workspace select -or-create $1
 fi
 
 terraform destroy -auto-approve
