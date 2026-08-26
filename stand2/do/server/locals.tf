@@ -1,5 +1,5 @@
 locals {
-  prefix         = terraform.workspace
+  prefix         = var.prefix != "" ? var.prefix : terraform.workspace
   api_token_path = "${path.module}/../../../workspaces/${local.prefix}/admin.token"
   lb_hostname    = "${local.prefix}-lb.${var.parent_domain}"
   web_root       = "https://${local.lb_hostname}"

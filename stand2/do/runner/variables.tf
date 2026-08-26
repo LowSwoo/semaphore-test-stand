@@ -37,6 +37,12 @@ variable "region" {
   default     = "fra1"
 }
 
+variable "prefix" {
+  description = "Optional resource prefix override. If empty, terraform.workspace is used."
+  type        = string
+  default     = ""
+}
+
 variable "semaphore_version" {
   description = "Semaphore runner version (or set SEMAPHORE_RUNNER_VERSION)."
   type        = string

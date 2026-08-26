@@ -26,6 +26,12 @@ variable "region" {
   default     = "ams3"
 }
 
+variable "prefix" {
+  description = "Optional resource prefix override. If empty, terraform.workspace is used."
+  type        = string
+  default     = ""
+}
+
 variable "parent_domain" {
   description = "Parent domain hosted in Cloudflare (e.g. semaphoreui.dev). The LB is published as a proxied '<prefix>-lb.<parent_domain>' record in this zone."
   type        = string
