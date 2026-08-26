@@ -12,5 +12,6 @@ admin.token
 .env
 .env.*
 !*.example
-/workspaces/**/
+/workspaces/**/admin.token
+/workspaces/**/id_rsa
 !/workspaces/example/

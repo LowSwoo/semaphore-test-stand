@@ -1,0 +1,52 @@
+runners:
+  delta:
+    name: delta
+    runner_executor_type: docker
+  # beta:
+  #   name: beta
+  # alpha:
+  #   name: alpha
+  # gamma:
+  #   name: gamma
+  # epsilon:
+  #   name: epsilon
+  # zeta:
+  #   name: zeta
+  # eta:
+  #   name: eta
+  # theta:
+  #   name: theta
+  # iota:
+  #   name: iota
+  # kappa:
+  #   name: kappa
+  # lambda:
+  #   name: lambda
+  # mu:
+  #   name: mu
+  # nu:
+  #   name: nu
+  # xi:
+  #   name: xi
+  # omicron:
+  #   name: omicron
+  # pi:
+  #   name: pi
+  # rho:
+  #   name: rho
+  # sigma:
+  #   name: sigma
+  # tau:
+  #   name: tau
+  # upsilon:
+  #   name: upsilon
+  # phi:
+  #   name: phi
+  # chi:
+  #   name: chi
+
+cluster_ip_range: 10.10.13.0/24
+runners_ip_range: 10.10.12.0/24
+subscription_key: 75b1875e-df08-4b38-9ab0-23b4c2ba9a69
+cluster: 2
+ha_disabled: false
