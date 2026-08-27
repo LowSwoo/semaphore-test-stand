@@ -27,6 +27,7 @@ resource "digitalocean_droplet" "runner" {
     type = "ssh"
     user = "root"
     host = self.ipv4_address
+    agent = true
   }
 
   provisioner "remote-exec" {
