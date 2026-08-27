@@ -7,6 +7,7 @@ variable "do_token" {
 variable "do_k8s_cluster" {
   description = "DigitalOcean Kubernetes cluster ID (or set DO_K8S_CLUSTER)."
   type        = string
+  default     = ""
 }
 
 variable "runner_executor_type" {
