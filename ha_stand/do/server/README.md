@@ -69,7 +69,7 @@ Each role boots with a dedicated cloud-init template in [cloud-init/](cloud-init
 ## Setup
 
 ```sh
-cd stand2_do
+cd ha_stand/do/server
 cp terraform.tfvars.example terraform.tfvars   # fill in token, ssh key, secrets
 terraform init
 terraform plan

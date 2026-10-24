@@ -48,7 +48,7 @@ Each role boots from a dedicated cloud-init template under
 ### 1. Create `.env`
 
 ```sh
-cp .env.example .env    # in stand2/ — the scripts source ../.env from do/
+cp .env.example .env    # in ha_stand/ — the scripts source ../.env from do/
 ```
 
 Fill in the DigitalOcean token, Cloudflare token, parent domain, SSH key name

@@ -46,7 +46,7 @@ Everything except `example/` is gitignored (see the repo root
 
 ### `config.yml` (required, written by hand)
 
-Read by both `stand2/do/server` and `stand2/do/runner`:
+Read by both `ha_stand/do/server` and `ha_stand/do/runner`:
 
 ```yaml
 runners:                      # one entry per runner droplet
@@ -77,7 +77,7 @@ runners. If it is lost or invalid, taint/replace
 ```sh
 cp -r workspaces/example workspaces/<name>
 # edit workspaces/<name>/config.yml: set subscription_key, adjust runners/ranges
-cd stand2/do
+cd ha_stand/do
 ./up.sh <name>
 ```
 

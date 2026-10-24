@@ -10,10 +10,10 @@ The repo is split into two independent stands that operate at different layers:
 | Stand                | Layer          | What it does                                                                                                                           | Docs                                 |
 | -------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | [`ansible_vaults_test_project`](ansible_vaults_test_project)   | Application    | Configures resources *inside* a running Semaphore instance — projects, keys, repositories, inventories, environments, and templates.    | [ansible_vaults_test_project/README.md](ansible_vaults_test_project/README.md) |
-| [`stand2`](stand2)   | Infrastructure | Provisions a complete Semaphore UI *cluster* (load balancer + UI nodes + PostgreSQL + Redis + runners) on DigitalOcean.                  | [stand2/README.md](stand2/README.md) |
+| [`ha_stand`](ha_stand)   | Infrastructure | Provisions a complete Semaphore UI *cluster* (load balancer + UI nodes + PostgreSQL + Redis + runners) on DigitalOcean.                  | [ha_stand/README.md](ha_stand/README.md) |
 
 The two are independent: `ansible_vaults_test_project` targets any reachable Semaphore API (typically
-a local instance), while `stand2` stands up the cloud infrastructure that
+a local instance), while `ha_stand` stands up the cloud infrastructure that
 Semaphore itself runs on.
 
 ## ansible_vaults_test_project — Semaphore resources
@@ -35,15 +35,15 @@ terraform apply
 See [ansible_vaults_test_project/README.md](ansible_vaults_test_project/README.md) for obtaining an API token and the full
 list of resources.
 
-## stand2 — Cluster infrastructure
+## ha_stand — Cluster infrastructure
 
 Provisions a Semaphore UI cluster on **DigitalOcean**: a load balancer fronting
 several stateless UI nodes that share one PostgreSQL database and one Redis
 instance, plus a pool of runners. The deployment is split into two Terraform
-root modules — [`server/`](stand2/do/server) (the cluster) and
-[`runner/`](stand2/do/runner) (the task runners) — driven by wrapper scripts in
-[`stand2/do/`](stand2/do). Nodes are configured at boot through the cloud-init
-templates in [`stand2/shared/`](stand2/shared).
+root modules — [`server/`](ha_stand/do/server) (the cluster) and
+[`runner/`](ha_stand/do/runner) (the task runners) — driven by wrapper scripts in
+[`ha_stand/do/`](ha_stand/do). Nodes are configured at boot through the cloud-init
+templates in [`ha_stand/shared/`](ha_stand/shared).
 
 DNS and TLS are handled by **Cloudflare**: the load balancer is published as a
 proxied `<name>-lb.<parent_domain>` record in the Cloudflare-hosted parent
@@ -53,11 +53,11 @@ certificates are managed on the provider side.
 Several independent stands can run from the same code: each stand is a
 Terraform **workspace**, configured by a directory in
 [`workspaces/`](workspaces) (see [workspaces/README.md](workspaces/README.md)).
-Credentials and shared settings come from `stand2/.env` (`TF_VAR_*` variables)
+Credentials and shared settings come from `ha_stand/.env` (`TF_VAR_*` variables)
 rather than per-stack `.tfvars`:
 
 ```sh
-cd stand2
+cd ha_stand
 cp .env.example .env                   # fill in tokens, passwords, keys
 cp -r ../workspaces/example ../workspaces/test1   # per-stand config.yml
 
@@ -68,15 +68,15 @@ cd do
 
 `down_servers.sh` / `down_runners.sh` tear down the two halves separately;
 `down_servers.sh` keeps the Cloudflare records so a later `up.sh` reuses them.
-See [stand2/README.md](stand2/README.md) and
-[stand2/do/server/README.md](stand2/do/server/README.md) for details.
+See [ha_stand/README.md](ha_stand/README.md) and
+[ha_stand/do/server/README.md](ha_stand/do/server/README.md) for details.
 
 ## Repository layout
 
 ```
 .
 ├── ansible_vaults_test_project/                 # Semaphore resources via the semaphoreui provider
-├── stand2/                 # Cloud cluster infrastructure
+├── ha_stand/                 # Cloud cluster infrastructure
 │   ├── .env.example        #   TF_VAR_* credentials/settings template
 │   ├── do/                 #   DigitalOcean deployment
 │   │   ├── server/         #     load balancer + UI cluster + Postgres + Redis
@@ -91,7 +91,7 @@ See [stand2/README.md](stand2/README.md) and
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5
 - For `ansible_vaults_test_project`: a reachable Semaphore instance and an API token
-- For `stand2`:
+- For `ha_stand`:
   - A DigitalOcean API token and an SSH key uploaded to DigitalOcean (the
     matching key loaded in your `ssh-agent` — Terraform connects over SSH to
     mint the admin token)
