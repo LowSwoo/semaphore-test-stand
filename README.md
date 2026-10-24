@@ -9,14 +9,14 @@ The repo is split into two independent stands that operate at different layers:
 
 | Stand                | Layer          | What it does                                                                                                                           | Docs                                 |
 | -------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| [`stand1`](stand1)   | Application    | Configures resources *inside* a running Semaphore instance — projects, keys, repositories, inventories, environments, and templates.    | [stand1/README.md](stand1/README.md) |
+| [`ansible_vaults_test_project`](ansible_vaults_test_project)   | Application    | Configures resources *inside* a running Semaphore instance — projects, keys, repositories, inventories, environments, and templates.    | [ansible_vaults_test_project/README.md](ansible_vaults_test_project/README.md) |
 | [`stand2`](stand2)   | Infrastructure | Provisions a complete Semaphore UI *cluster* (load balancer + UI nodes + PostgreSQL + Redis + runners) on DigitalOcean.                  | [stand2/README.md](stand2/README.md) |
 
-The two are independent: `stand1` targets any reachable Semaphore API (typically
+The two are independent: `ansible_vaults_test_project` targets any reachable Semaphore API (typically
 a local instance), while `stand2` stands up the cloud infrastructure that
 Semaphore itself runs on.
 
-## stand1 — Semaphore resources
+## ansible_vaults_test_project — Semaphore resources
 
 Drives a Semaphore instance through the
 [`semaphoreui/semaphore`](https://registry.terraform.io/providers/semaphoreui/semaphore/latest/docs)
@@ -26,13 +26,13 @@ variable groups with secrets), and templates that exercise features such as
 multiple Ansible vault passwords and env/var secret injection.
 
 ```sh
-cd stand1
+cd ansible_vaults_test_project
 cp terraform.tfvars.example terraform.tfvars   # set api_token
 terraform init
 terraform apply
 ```
 
-See [stand1/README.md](stand1/README.md) for obtaining an API token and the full
+See [ansible_vaults_test_project/README.md](ansible_vaults_test_project/README.md) for obtaining an API token and the full
 list of resources.
 
 ## stand2 — Cluster infrastructure
@@ -75,7 +75,7 @@ See [stand2/README.md](stand2/README.md) and
 
 ```
 .
-├── stand1/                 # Semaphore resources via the semaphoreui provider
+├── ansible_vaults_test_project/                 # Semaphore resources via the semaphoreui provider
 ├── stand2/                 # Cloud cluster infrastructure
 │   ├── .env.example        #   TF_VAR_* credentials/settings template
 │   ├── do/                 #   DigitalOcean deployment
@@ -90,7 +90,7 @@ See [stand2/README.md](stand2/README.md) and
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5
-- For `stand1`: a reachable Semaphore instance and an API token
+- For `ansible_vaults_test_project`: a reachable Semaphore instance and an API token
 - For `stand2`:
   - A DigitalOcean API token and an SSH key uploaded to DigitalOcean (the
     matching key loaded in your `ssh-agent` — Terraform connects over SSH to

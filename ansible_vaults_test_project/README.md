@@ -23,7 +23,7 @@ fetch("/api/user/tokens", {
 ## Setup
 
 ```sh
-cd stands/stand1
+cd stands/ansible_vaults_test_project
 cp terraform.tfvars.example terraform.tfvars   # edit api_token
 terraform init
 ```
