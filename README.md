@@ -9,6 +9,8 @@ The repo contains 2 types of entities:
 - `*_project` &mdash; Terraform code for provisiing a Semaphore UI project
 - `*_stand` &mdash; Terraform and Ansible code for provising some infrasructure for testing Semaphore UI
 
+Provisioned Semaphore UI projects can refer to Ansible playbooks and Terraform code from repository https://github.com/semaphoreui/semaphore-test-stand-tests.
+
 The repo contains following stands and projects:
 
 | Stand                | Layer          | What it does                                                                                                                           | Docs                                 |
