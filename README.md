@@ -1,11 +1,15 @@
 # Semaphore Test Stand
 
-Terraform-based test stands for [Semaphore UI](https://semaphoreui.com). They
+Terraform-based test stands and projects for [Semaphore UI](https://semaphoreui.com). They
 spin up reproducible Semaphore environments for end-to-end testing — from
 configuring resources inside a single instance to provisioning a full cloud
 cluster from scratch.
 
-The repo is split into two independent stands that operate at different layers:
+The repo contains 2 types of entities:
+- `*_project` &mdash; Terraform code for provisiing a Semaphore UI project
+- `*_stand` &mdash; Terraform and Ansible code for provising some infrasructure for testing Semaphore UI
+
+The repo contains following stands and projects:
 
 | Stand                | Layer          | What it does                                                                                                                           | Docs                                 |
 | -------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
