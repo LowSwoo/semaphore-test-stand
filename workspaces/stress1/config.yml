@@ -1,7 +1,7 @@
 runners:
   delta:
     name: delta
-    runner_executor_type: docker
+    runner_executor_type: local
   # beta:
   #   name: beta
   # alpha:
