@@ -31,8 +31,14 @@ write_files:
       ha:
         enabled: ${ha_enabled}
         node_id: node${node_index}
-        redis:
-          addr: "${redis_host}:6379"
+        engine: redis_sentinel
+        redis_sentinel:
+          master_name: "${redis_master_name}"
+          addrs:
+      %{~ for addr in redis_sentinel_addrs ~}
+            - "${addr}"
+      %{~ endfor }
+          sentinel_pass: "${redis_sentinel_password}"
           pass: "${redis_password}"
       use_remote_runner: true
       subscription:

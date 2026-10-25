@@ -13,11 +13,11 @@ provider.
 | Semaphore UI cluster  | 3     | `s-1vcpu-2gb` | Behind the LB (see *Zones* below)                 |
 | Semaphore runners     | 3     | `s-1vcpu-2gb` | Execute tasks, reach the cluster via the LB       |
 | PostgreSQL            | 1     | `s-1vcpu-2gb` | Shared database for the cluster                   |
-| Redis                 | 1     | `s-1vcpu-2gb` | Shared cache/session store                        |
+| Redis Sentinel        | 2     | `s-1vcpu-2gb` | `redis-1` master + `redis-2` replica, Sentinel on each (`redis_nodes`) |
 
 All droplets join one VPC (`10.10.10.0/24`). A DigitalOcean Cloud Firewall
-allows SSH and `:3000` from anywhere, Postgres/Redis only from the VPC, and all
-egress.
+allows SSH and `:3000` from anywhere, Postgres (`5432`), Redis (`6379`) and
+Sentinel (`26379`) only from the VPC, and all egress.
 
 ### TLS / SSL (Cloudflare proxy)
 
@@ -58,9 +58,15 @@ Each role boots with a dedicated cloud-init template in [cloud-init/](cloud-init
 - **postgres** — installs PostgreSQL, discovers its private IP from the
   DigitalOcean metadata service, binds to it, creates the Semaphore
   database/user, and allows `scram-sha-256` access from the VPC.
-- **redis** — installs Redis, binds to its private IP, sets a password and AOF.
+- **redis** — installs `redis-server` + `redis-sentinel` from packages.redis.io,
+  binds both to the private IP and sets passwords. `redis_master` boots as the
+  replication master, `redis_replica` droplets get `replicaof <master>` and wait
+  for the master before starting. Each Sentinel monitors `redis_master_name` at
+  the master's private IP with `redis_sentinel_quorum` ([database.tf](database.tf),
+  [../../shared/cloud-init/redis.yaml.tftpl](../../shared/cloud-init/redis.yaml.tftpl)).
 - **semaphore** — installs Docker, writes `/etc/semaphore/config.yml` pointing
-  at Postgres + Redis (private IPs injected by Terraform), runs DB migrations,
+  at Postgres and at the Sentinel list (`ha.engine: redis_sentinel`, private
+  IPs injected by Terraform), runs DB migrations,
   then starts the Semaphore server container. The same `access_key_encryption`
   key is shared across all 3 nodes so they form one cluster.
 - **runner** — installs Docker and starts a Semaphore runner that registers

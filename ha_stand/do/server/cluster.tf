@@ -16,24 +16,26 @@ resource "digitalocean_droplet" "cluster" {
     # Only the first node bootstraps the admin user + API token, so they are
     # created exactly once across the cluster (the shared DB is migrated under
     # an advisory lock separately).
-    bootstrap             = count.index == 0
-    db_host               = digitalocean_droplet.postgres.ipv4_address_private
-    db_name               = var.db_name
-    db_user               = var.db_user
-    db_password           = var.db_password
-    redis_host            = digitalocean_droplet.redis_master.ipv4_address_private
-    redis_password        = var.redis_password
-    web_root              = local.web_root
-    cookie_hash           = var.semaphore_cookie_hash
-    cookie_encryption     = var.semaphore_cookie_encryption
-    access_key_encryption = var.semaphore_access_key_encryption
-    admin_user            = var.semaphore_admin_user
-    admin_password        = var.semaphore_admin_password
-    admin_email           = var.semaphore_admin_email
-    semaphore_version     = var.semaphore_version
-    node_index            = count.index + 1
-    subscription_key      = local.config.subscription_key
-    ha_enabled            = local.config.ha_disabled ? "false" : "true"
+    bootstrap               = count.index == 0
+    db_host                 = digitalocean_droplet.postgres.ipv4_address_private
+    db_name                 = var.db_name
+    db_user                 = var.db_user
+    db_password             = var.db_password
+    redis_sentinel_addrs    = local.redis_sentinel_addrs
+    redis_master_name       = local.redis_master_name
+    redis_sentinel_password = var.redis_sentinel_password
+    redis_password          = var.redis_password
+    web_root                = local.web_root
+    cookie_hash             = var.semaphore_cookie_hash
+    cookie_encryption       = var.semaphore_cookie_encryption
+    access_key_encryption   = var.semaphore_access_key_encryption
+    admin_user              = var.semaphore_admin_user
+    admin_password          = var.semaphore_admin_password
+    admin_email             = var.semaphore_admin_email
+    semaphore_version       = var.semaphore_version
+    node_index              = count.index + 1
+    subscription_key        = local.config.subscription_key
+    ha_enabled              = local.config.ha_disabled ? "false" : "true"
   })
 
   depends_on = [digitalocean_droplet.cluster[0]]
