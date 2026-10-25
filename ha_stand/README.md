@@ -131,3 +131,18 @@ log in with the `semaphore_admin_*` credentials from `.env`.
 ./down_runners.sh test1    # runners only
 ./down_servers.sh test1    # servers only; keeps the Cloudflare records
 ```
+
+Runners are registered on the Semaphore server, so `down_runners.sh` normally
+deletes their server-side records through the API using the admin token the
+server apply left in `/tmp/<workspace>-admin.token`. If the servers are already
+gone (or that token file is), the API call cannot succeed and the destroy would
+fail before removing a single droplet. For that case:
+
+```sh
+./down_runners.sh test1 --skip-server   # or: ./down.sh test1 --skip-server
+```
+
+`--skip-server` drops the `semaphoreui_runner.*` records from the Terraform
+state and destroys only the DigitalOcean resources. It is implied automatically
+when the token file is missing. If the server is in fact still alive, the runner
+records stay registered there and have to be removed by hand.

@@ -74,6 +74,9 @@ cd do
 
 `down_servers.sh` / `down_runners.sh` tear down the two halves separately;
 `down_servers.sh` keeps the Cloudflare records so a later `up.sh` reuses them.
+`down_runners.sh test1 --skip-server` destroys the runner droplets without
+deregistering them on the server — for stands whose servers (or admin token)
+are already gone.
 See [ha_stand/README.md](ha_stand/README.md) and
 [ha_stand/do/server/README.md](ha_stand/do/server/README.md) for details.
 

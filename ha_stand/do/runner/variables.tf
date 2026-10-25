@@ -64,3 +64,13 @@ variable "ssh_key_name" {
   description = "Name of the existing SSH key in DigitalOcean to use for runner access (or set SSH_KEY_NAME)."
   type        = string
 }
+variable "skip_server" {
+  description = <<-EOT
+    Destroy-time switch used by down_runners.sh --skip-server: the Semaphore
+    server (and the DigitalOcean project it created) may already be gone, so
+    nothing may be looked up or deleted there. Disables the project data source;
+    the semaphoreui_runner.* records are dropped from state by the script.
+  EOT
+  type    = bool
+  default = false
+}
