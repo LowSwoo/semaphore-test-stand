@@ -59,7 +59,16 @@ runners_ip_range: 10.10.12.0/24    # VPC range for the runners (must differ)
 subscription_key: <key>            # Semaphore Pro subscription key
 cluster: 3                         # number of Semaphore UI droplets behind the LB
 ha_disabled: false                 # true = run without HA mode
+
+redis_nodes: 2                     # Redis droplets: 1 master + (N-1) replicas, Sentinel on each (optional, default 2)
+redis_sentinel_quorum: 1           # Sentinels that must agree the master is down (optional, default 1)
+redis_master_name: semaphore       # master name in `sentinel monitor` and in Semaphore's ha.redis_sentinel.master_name (optional)
 ```
+
+The three `redis_*` keys are optional. With 2 nodes and quorum 1 a single
+surviving Sentinel can promote the replica; quorum 2 would need both Sentinels
+alive and makes failover impossible once one node is lost. For a production-like
+setup use `redis_nodes: 3` and `redis_sentinel_quorum: 2`.
 
 Commenting runner entries in or out and re-applying the `runner` module is the
 intended way to scale runners up and down.

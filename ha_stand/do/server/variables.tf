@@ -64,7 +64,13 @@ variable "db_password" {
 }
 
 variable "redis_password" {
-  description = "Redis password."
+  description = "Password of the Redis data nodes (requirepass / masterauth on every node)."
+  type        = string
+  sensitive   = true
+}
+
+variable "redis_sentinel_password" {
+  description = "Password of the Redis Sentinel processes themselves (requirepass in sentinel.conf). Distinct from redis_password."
   type        = string
   sensitive   = true
 }
@@ -108,7 +114,7 @@ variable "semaphore_access_key_encryption" {
 variable "semaphore_version" {
   description = "Semaphore runner version (or set SEMAPHORE_RUNNER_VERSION)."
   type        = string
-  default     = "2.18.6-beta1"
+  default     = "2.20.16-beta4"
 }
 
 variable "ssh_key_name" {

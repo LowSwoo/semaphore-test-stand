@@ -8,3 +8,9 @@ runners_ip_range: 10.10.12.0/24
 subscription_key: 75b1875e-...
 cluster: 3
 ha_disabled: false
+
+# Redis Sentinel cluster: redis_nodes droplets (1 master + replicas), each running
+# redis-server and redis-sentinel. quorum = sentinels that must agree the master is down.
+redis_nodes: 2
+redis_sentinel_quorum: 1
+redis_master_name: semaphore
