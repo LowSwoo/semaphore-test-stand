@@ -21,7 +21,7 @@ resource "digitalocean_droplet" "cluster" {
     db_name               = var.db_name
     db_user               = var.db_user
     db_password           = var.db_password
-    redis_host            = digitalocean_droplet.redis.ipv4_address_private
+    redis_host            = digitalocean_droplet.redis_master.ipv4_address_private
     redis_password        = var.redis_password
     web_root              = local.web_root
     cookie_hash           = var.semaphore_cookie_hash

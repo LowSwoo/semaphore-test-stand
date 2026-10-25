@@ -1,6 +1,13 @@
 #cloud-config
 # Shared across the do/ and gcp/ server stacks. ${private_ip_cmd} injects the
 # provider-specific private-IP metadata lookup (the only difference between clouds).
+#
+# Redis Sentinel node. Every node runs redis-server AND redis-sentinel. The node with
+# is_master=true boots as the replication master, the others boot as its replicas
+# (replicaof master_ip). All Sentinels monitor the same master under master_name and
+# promote a replica when quorum of them agree the master is down. After a failover
+# Sentinel rewrites redis.conf / sentinel.conf itself (CONFIG REWRITE), so the roles
+# set here are boot-time roles only.
 package_update: false
 package_upgrade: false
 runcmd:
@@ -9,15 +16,69 @@ runcmd:
     chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
     echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/redis.list
     apt update
-    DEBIAN_FRONTEND=noninteractive apt install redis -y
+    DEBIAN_FRONTEND=noninteractive apt install redis redis-sentinel -y
     set -e
+    # Both packages start their services with stock configs; stop them before writing ours.
+    systemctl stop redis-sentinel redis-server
+    # The Debian-style unit must point at the config we write below.
+    grep -q '/etc/redis/sentinel.conf' /lib/systemd/system/redis-sentinel.service
+
     PRIV_IP=$(${private_ip_cmd})
+    IS_MASTER=${is_master}
+    MASTER_IP=%{ if is_master }$PRIV_IP%{ else }${master_ip}%{ endif }
+
+    # --- redis-server -----------------------------------------------------------
+    # Static settings go to an included file (the include is the last line of
+    # redis.conf, so it wins over anything Sentinel rewrites at runtime).
     mkdir -p /etc/redis/redis.conf.d
     cat > /etc/redis/redis.conf.d/semaphore.conf <<EOF
     bind 127.0.0.1 $PRIV_IP
     protected-mode yes
     requirepass ${redis_password}
+    # masterauth on every node: after a failover the old master rejoins as a replica.
+    masterauth ${redis_password}
+    replica-announce-ip $PRIV_IP
     EOF
     grep -q "redis.conf.d" /etc/redis/redis.conf || echo "include /etc/redis/redis.conf.d/semaphore.conf" >> /etc/redis/redis.conf
-    systemctl enable redis-server
-    systemctl restart redis-server
+    # replicaof must live in redis.conf itself (not the include) so that Sentinel's
+    # CONFIG REWRITE can drop it when this node is promoted.
+    sed -i '/^replicaof /d' /etc/redis/redis.conf
+    if [ "$IS_MASTER" != "true" ]; then
+      echo "replicaof $MASTER_IP 6379" >> /etc/redis/redis.conf
+    fi
+
+    # --- redis-sentinel ---------------------------------------------------------
+    # Keep the packaged daemonize/pidfile/logfile/dir/supervised lines (they match the
+    # systemd unit), drop the stock monitoring block and network settings, append ours.
+    sed -i -E '/^(sentinel |port |bind |protected-mode |requirepass )/d' /etc/redis/sentinel.conf
+    cat >> /etc/redis/sentinel.conf <<EOF
+
+    # --- managed by cloud-init (ha_stand) ---
+    port 26379
+    bind 127.0.0.1 $PRIV_IP
+    protected-mode yes
+    requirepass ${sentinel_password}
+    sentinel sentinel-pass ${sentinel_password}
+    sentinel announce-ip $PRIV_IP
+    sentinel monitor ${master_name} $MASTER_IP 6379 ${quorum}
+    sentinel auth-pass ${master_name} ${redis_password}
+    sentinel down-after-milliseconds ${master_name} 5000
+    sentinel failover-timeout ${master_name} 10000
+    sentinel parallel-syncs ${master_name} 1
+    EOF
+    # Sentinel rewrites this file at runtime, so it must be writable by the redis user.
+    chown redis:redis /etc/redis/sentinel.conf
+    chmod 640 /etc/redis/sentinel.conf
+
+    # --- start --------------------------------------------------------------------
+    export REDISCLI_AUTH='${redis_password}'
+    if [ "$IS_MASTER" != "true" ]; then
+      # A replica (and its Sentinel) must see the master first, otherwise Sentinel
+      # marks the master as down right at boot.
+      until redis-cli -h "$MASTER_IP" -p 6379 ping 2>/dev/null | grep -q PONG; do
+        echo "waiting for redis master $MASTER_IP..."; sleep 3
+      done
+    fi
+    systemctl enable --now redis-server
+    until redis-cli -h 127.0.0.1 -p 6379 ping 2>/dev/null | grep -q PONG; do sleep 1; done
+    systemctl enable --now redis-sentinel

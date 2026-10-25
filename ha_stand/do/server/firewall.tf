@@ -25,10 +25,17 @@ resource "digitalocean_firewall" "main" {
     source_addresses = [local.config.cluster_ip_range]
   }
 
-  # Redis — VPC only.
+  # Redis data nodes — VPC only.
   inbound_rule {
     protocol         = "tcp"
     port_range       = "6379"
+    source_addresses = [local.config.cluster_ip_range]
+  }
+
+  # Redis Sentinel — VPC only (Semaphore nodes + Sentinel-to-Sentinel gossip).
+  inbound_rule {
+    protocol         = "tcp"
+    port_range       = "26379"
     source_addresses = [local.config.cluster_ip_range]
   }
 

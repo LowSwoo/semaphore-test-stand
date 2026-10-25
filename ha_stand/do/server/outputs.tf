@@ -33,10 +33,18 @@ output "postgres_server" {
   }
 }
 
-output "redis_server" {
-  description = "Redis droplet."
+output "redis_servers" {
+  description = "Redis Sentinel cluster droplets (redis-1 boots as master, the rest as replicas)."
   value = {
-    public_ip  = digitalocean_droplet.redis.ipv4_address
-    private_ip = digitalocean_droplet.redis.ipv4_address_private
+    for d in concat([digitalocean_droplet.redis_master], digitalocean_droplet.redis_replica) : d.name => {
+      region     = d.region
+      public_ip  = d.ipv4_address
+      private_ip = d.ipv4_address_private
+    }
   }
+}
+
+output "redis_sentinel_addrs" {
+  description = "Sentinel endpoints (host:port) as configured in Semaphore's ha.redis_sentinel.addrs."
+  value       = local.redis_sentinel_addrs
 }
