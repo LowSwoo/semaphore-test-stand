@@ -62,7 +62,7 @@ ha:
     pass: <redis_password>
 ```
 
-This requires **Semaphore ≥ 2.20.16-beta4** (first release with the
+This requires **Semaphore ≥ 2.20.16-beta5** (first release with the
 `redis_sentinel` engine); `.env.example` pins that version.
 
 The cluster shape comes from the workspace `config.yml` (`redis_nodes`,

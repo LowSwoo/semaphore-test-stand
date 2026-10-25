@@ -114,7 +114,7 @@ variable "semaphore_access_key_encryption" {
 variable "semaphore_version" {
   description = "Semaphore runner version (or set SEMAPHORE_RUNNER_VERSION)."
   type        = string
-  default     = "2.20.16-beta4"
+  default     = "2.20.16-beta5"
 }
 
 variable "ssh_key_name" {
