@@ -48,3 +48,13 @@ output "redis_sentinel_addrs" {
   description = "Sentinel endpoints (host:port) as configured in Semaphore's ha.redis_sentinel.addrs."
   value       = local.redis_sentinel_addrs
 }
+
+output "s3_bucket" {
+  description = "S3/R2 bucket carrying the admin token to the runner module."
+  value       = aws_s3_bucket.stand.id
+}
+
+output "admin_token_s3_uri" {
+  description = "S3 URI of the admin API token read by the runner module."
+  value       = "s3://${aws_s3_bucket.stand.id}/${aws_s3_object.admin_token.key}"
+}

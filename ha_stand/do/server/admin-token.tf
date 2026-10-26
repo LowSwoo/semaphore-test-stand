@@ -41,3 +41,11 @@ resource "terraform_data" "fetch_admin_token" {
     EOT
   }
 }
+
+# Read the freshly minted token back so it can be uploaded to S3 in the same
+# apply. depends_on defers the read until the provisioner above has run; the
+# "sensitive" variant keeps the token out of plan output and task logs.
+data "local_sensitive_file" "admin_token" {
+  filename   = local.api_token_path
+  depends_on = [terraform_data.fetch_admin_token]
+}

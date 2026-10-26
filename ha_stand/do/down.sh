@@ -6,7 +6,7 @@
 #
 # --skip-server is forwarded to down_runners.sh: destroy the runner droplets
 # without deregistering them on the Semaphore server (use when the servers are
-# already gone or the admin token in /tmp/<workspace>-admin.token is lost).
+# already gone or the admin token in s3://<bucket>/<workspace>/admin.token is lost).
 set -e
 
 ./down_runners.sh "$@"

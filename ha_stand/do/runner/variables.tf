@@ -71,6 +71,40 @@ variable "skip_server" {
     nothing may be looked up or deleted there. Disables the project data source;
     the semaphoreui_runner.* records are dropped from state by the script.
   EOT
-  type    = bool
-  default = false
+  type        = bool
+  default     = false
+}
+
+# --- S3 / Cloudflare R2 (admin token exchange between server and runner modules)
+
+variable "s3_endpoint" {
+  description = "S3 API endpoint of the bucket holding the stand's admin token. Cloudflare R2: https://<account_id>.r2.cloudflarestorage.com. Empty: AWS S3."
+  type        = string
+  default     = ""
+}
+
+variable "aws_region" {
+  description = "Region of the S3 bucket holding the stand's admin token. Cloudflare R2: \"auto\"."
+  type        = string
+  default     = "auto"
+}
+
+variable "aws_access_key" {
+  description = "S3 access key ID (R2 API token access key / AWS access key). Leave empty to use the default AWS credential chain (env vars, profile, instance role)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "aws_secret_key" {
+  description = "S3 secret access key (R2 API token secret / AWS secret key). Leave empty to use the default AWS credential chain."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "s3_bucket" {
+  description = "Name of the S3 bucket that carries the admin token from the server module to the runner module. Empty: '<prefix>-semaphore-stand'."
+  type        = string
+  default     = ""
 }

@@ -105,6 +105,9 @@ See [ha_stand/README.md](ha_stand/README.md) and
     matching key loaded in your `ssh-agent` — Terraform connects over SSH to
     mint the admin token)
   - A Cloudflare API token (DNS edit + zone read) for the parent domain
+  - A Cloudflare R2 API token (Object Read & Write, may create buckets) and the
+    account's R2 S3 endpoint: the server module uploads the admin token to a
+    private bucket there and the runner module reads it
 
 ## Secrets
 

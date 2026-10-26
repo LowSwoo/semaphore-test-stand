@@ -10,5 +10,9 @@ terraform {
       source  = "semaphoreui/semaphore"
       version = ">= 0.3.4"
     }
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
   }
 }

@@ -86,6 +86,52 @@ REDISCLI_AUTH=<redis_sentinel_password> redis-cli -p 26379 SENTINEL get-master-a
 systemctl stop redis-server             # on the master: forces a failover
 ```
 
+## Admin token hand-over (Cloudflare R2 / S3)
+
+The `server` and `runner` modules are separate Terraform roots and may run on
+different machines (for example as two Semaphore tasks), so the admin API token
+is exchanged through a private **Cloudflare R2** bucket (any S3-compatible
+store works, including AWS S3) instead of a local file:
+
+1. `server` apply mints the token over SSH on the first cluster node, saves it to
+   `/tmp/<workspace>-admin.token` and uploads it to
+   `s3://<bucket>/<workspace>/admin.token` (`aws_s3_object.admin_token`).
+   The bucket is created by the module (R2 buckets are private and encrypted at
+   rest by default) with `force_destroy` so `down_servers.sh` can remove it.
+2. `runner` apply reads the object with an `aws_s3_object` data source and uses
+   the token for the `semaphoreui` provider and for the registration-token calls
+   made from the runner droplets.
+
+Both modules talk to the store through the `hashicorp/aws` provider configured
+for R2: `TF_VAR_s3_endpoint` is the account endpoint
+`https://<account_id>.r2.cloudflarestorage.com`, `TF_VAR_aws_region` is `auto`,
+and `TF_VAR_aws_access_key` / `TF_VAR_aws_secret_key` are an R2 API token with
+Object Read & Write permission that is also allowed to create and delete
+buckets. With `s3_endpoint` empty the same code targets AWS S3 (set a real
+region; leave the keys empty for the default AWS credential chain).
+
+R2 rejects the request checksums the AWS SDK sends by default. The provider has
+no setting for this, so the SDK is configured through two plain environment
+variables that must be present wherever the modules run (the `.env` sourced by
+the scripts, or the Semaphore environment of the templates):
+
+```sh
+AWS_REQUEST_CHECKSUM_CALCULATION=when_required
+AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
+```
+
+The bucket name defaults to `<workspace>-semaphore-stand` (unique per account on
+R2, global on AWS; override with `TF_VAR_s3_bucket` on a clash).
+
+The upload reads the token back from `/tmp/<workspace>-admin.token` on the
+machine that runs the `server` apply. If that file is gone on a later apply
+(another machine, `/tmp` cleaned on reboot) the plan fails with "no file exists";
+re-mint and re-upload the token with:
+
+```sh
+terraform apply -replace=terraform_data.fetch_admin_token
+```
+
 ## Quick start
 
 ### 1. Create `.env`
@@ -94,9 +140,9 @@ systemctl stop redis-server             # on the master: forces a failover
 cp .env.example .env    # in ha_stand/ — the scripts source ../.env from do/
 ```
 
-Fill in the DigitalOcean token, Cloudflare token, parent domain, SSH key name
-and passwords. Generate the cookie/encryption keys once and reuse them across
-nodes:
+Fill in the DigitalOcean token, Cloudflare token, AWS credentials, parent
+domain, SSH key name and passwords. Generate the cookie/encryption keys once and
+reuse them across nodes:
 
 ```sh
 head -c32 /dev/urandom | base64
@@ -134,9 +180,9 @@ log in with the `semaphore_admin_*` credentials from `.env`.
 
 Runners are registered on the Semaphore server, so `down_runners.sh` normally
 deletes their server-side records through the API using the admin token the
-server apply left in `/tmp/<workspace>-admin.token`. If the servers are already
-gone (or that token file is), the API call cannot succeed and the destroy would
-fail before removing a single droplet. For that case:
+server apply uploaded to `s3://<bucket>/<workspace>/admin.token`. If the servers
+are already gone (and their bucket with them), the API call cannot succeed and
+the destroy would fail before removing a single droplet. For that case:
 
 ```sh
 ./down_runners.sh test1 --skip-server   # or: ./down.sh test1 --skip-server
@@ -144,5 +190,6 @@ fail before removing a single droplet. For that case:
 
 `--skip-server` drops the `semaphoreui_runner.*` records from the Terraform
 state and destroys only the DigitalOcean resources. It is implied automatically
-when the token file is missing. If the server is in fact still alive, the runner
-records stay registered there and have to be removed by hand.
+when the token object is missing in S3 (checked with the `aws` CLI when it is
+installed). If the server is in fact still alive, the runner records stay
+registered there and have to be removed by hand.
