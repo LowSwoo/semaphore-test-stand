@@ -113,9 +113,11 @@ See [ha_stand/README.md](ha_stand/README.md) and
 
 This is a **test stand** — secrets are passed to nodes via cloud-init and stored
 in local files. State files, `*.tfvars`, `.env*`, generated tokens, and the
-per-stand `workspaces/` directories are git-ignored (see
-[.gitignore](.gitignore)); only `*.example` templates and `workspaces/example/`
-are committed. Copy them and fill in your own values. For production, use a
+per-stand `workspaces/<name>/` directories are git-ignored (see
+[.gitignore](.gitignore)); only `*.example` templates, `workspaces/README.md`
+and `workspaces/example/` are committed (the already tracked
+`workspaces/stress1/` predates the rule, see
+[workspaces/README.md](workspaces/README.md)). Copy them and fill in your own values. For production, use a
 secrets manager and restrict SSH source IPs in the firewall configuration.
 
 ## Domain access troubleshooting

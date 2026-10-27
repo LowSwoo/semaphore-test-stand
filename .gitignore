@@ -12,6 +12,12 @@ admin.token
 .env
 .env.*
 !*.example
+# Per-stand configs: workspaces/<name>/config.yml holds the subscription key.
+# Ignore everything under workspaces/ except the README and the template.
+# To commit a stand directory deliberately, add `!/workspaces/<name>/`.
+/workspaces/*
+!/workspaces/README.md
+!/workspaces/example/
+# Never commit generated secrets, even inside allowed directories.
 /workspaces/**/admin.token
 /workspaces/**/id_rsa
-!/workspaces/example/

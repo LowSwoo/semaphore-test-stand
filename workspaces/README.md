@@ -37,8 +37,19 @@ workspaces/
     config.yml        # stand definition, written by hand (required)
 ```
 
-Everything except `example/` is gitignored (see the repo root
-[.gitignore](../.gitignore)): `config.yml` contains the subscription key.
+Everything in `workspaces/` except this `README.md` and `example/` is
+gitignored (rule `/workspaces/*` in the repo root [.gitignore](../.gitignore)):
+`config.yml` contains the subscription key. `admin.token` and `id_rsa` are
+ignored even inside the allowed directories.
+
+To commit a stand directory on purpose (e.g. a CI stand whose `config.yml` has
+no key and gets it from `TF_VAR_subscription_key`), add the exception
+`!/workspaces/<name>/` to `.gitignore` and check it with
+`git check-ignore -v workspaces/<name>/config.yml`.
+
+`.gitignore` does not affect files that are already tracked:
+`workspaces/stress1/config.yml` was committed before this rule and stays
+tracked until it is removed from the index with `git rm --cached`.
 
 ## Files
 
