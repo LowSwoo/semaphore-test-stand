@@ -67,7 +67,9 @@ write_files:
       WantedBy=multi-user.target
 
 runcmd:
-  - curl -o semaphore_${semaphore_version}_linux_amd64.tar.gz -L https://github.com/semaphoreui/semaphore/releases/download/v${semaphore_version}/semaphore_${semaphore_version}_linux_amd64.tar.gz
+  # -f: fail on HTTP errors instead of saving the error page as the archive;
+  # exit stops runcmd here so tar/mv never run on a bad download.
+  - curl -fL -o semaphore_${semaphore_version}_linux_amd64.tar.gz https://github.com/semaphoreui/semaphore/releases/download/v${semaphore_version}/semaphore_${semaphore_version}_linux_amd64.tar.gz || exit 1
   - tar xf semaphore_${semaphore_version}_linux_amd64.tar.gz
   - sudo mv semaphore /usr/local/bin/
   # Dedicated unprivileged user to run the service.

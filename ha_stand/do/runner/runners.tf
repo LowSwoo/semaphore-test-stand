@@ -56,7 +56,8 @@ resource "digitalocean_droplet" "runner" {
       "snap wait system seed.loaded",
       "snap install doctl",
       "snap connect doctl:kube-config",
-      "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"",
+      # -f + exit: inline runs as one script and only its last exit code counts.
+      "curl -fLO \"https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\" || exit 1",
       "install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl",
       "mkdir -p /root/.config",
       "mkdir -p /root/.kube",
@@ -67,7 +68,7 @@ resource "digitalocean_droplet" "runner" {
 
   provisioner "remote-exec" {
     inline = [
-      "curl -o semaphore_${var.semaphore_version}_linux_amd64.tar.gz -L https://github.com/semaphoreui/semaphore/releases/download/v${var.semaphore_version}/semaphore_${var.semaphore_version}_linux_amd64.tar.gz",
+      "curl -fL -o semaphore_${var.semaphore_version}_linux_amd64.tar.gz https://github.com/semaphoreui/semaphore/releases/download/v${var.semaphore_version}/semaphore_${var.semaphore_version}_linux_amd64.tar.gz || exit 1",
       "tar xf semaphore_${var.semaphore_version}_linux_amd64.tar.gz",
       "mv semaphore /usr/local/bin/",
 
