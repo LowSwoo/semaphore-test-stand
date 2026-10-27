@@ -29,7 +29,7 @@ done
 
 echo "== files"
 if [[ -f "$env_file" ]]; then ok "ha_stand/.env"; else fail "ha_stand/.env missing (cp ha_stand/.env.example ha_stand/.env)"; fi
-if [[ -f "$config" ]]; then ok "workspaces/$name/config.yml"; else fail "workspaces/$name/config.yml missing (cp -r workspaces/example workspaces/$name)"; fi
+if [[ -f "$config" ]]; then ok "workspaces/$name/config.yml"; else fail "workspaces/$name/config.yml missing (.claude/skills/stand/scripts/new-stand.sh $name)"; fi
 if [[ ! "$name" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]]; then
   fail "stand name '$name' is not DNS-safe (lowercase, digits, hyphens)"
 fi
