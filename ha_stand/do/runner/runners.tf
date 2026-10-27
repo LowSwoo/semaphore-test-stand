@@ -30,6 +30,25 @@ resource "digitalocean_droplet" "runner" {
     agent = true
   }
 
+  # Provisioners start as soon as SSH is up, but cloud-init installs packages
+  # the later steps rely on (jq, curl, docker). Wait for it to finish first.
+  # Exit code 2 (recoverable errors, cloud-init >= 23.4) is reported and
+  # tolerated; any other non-zero code fails the apply with the status shown.
+  provisioner "remote-exec" {
+    inline = [
+      <<-EOT
+        rc=0
+        cloud-init status --wait >/dev/null || rc=$?
+        case "$rc" in
+          0) echo "cloud-init finished" ;;
+          2) echo "cloud-init finished with recoverable errors:"; cloud-init status --long || true ;;
+          *) echo "cloud-init failed (exit $rc):" >&2; cloud-init status --long >&2; exit 1 ;;
+        esac
+      EOT
+      ,
+    ]
+  }
+
   provisioner "remote-exec" {
     inline = [
       "mkdir -p /etc/semaphore",
