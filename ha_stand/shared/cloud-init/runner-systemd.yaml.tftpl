@@ -14,6 +14,6 @@ packages:
 runcmd:
   - add-apt-repository -y --update ppa:ansible/ansible
   - DEBIAN_FRONTEND=noninteractive apt-get install -y ansible
-  - usermod -aG docker semaphore
-  - systemctl restart semaphore-runner
+  # docker group membership for the semaphore user is set by the Terraform
+  # provisioner that creates the user (ha_stand/do/runner/runners.tf).
   - systemctl enable --now docker

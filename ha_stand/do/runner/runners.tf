@@ -71,7 +71,12 @@ resource "digitalocean_droplet" "runner" {
       "tar xf semaphore_${var.semaphore_version}_linux_amd64.tar.gz",
       "mv semaphore /usr/local/bin/",
 
+      # cloud-init installs docker.io in parallel; create the group up front so
+      # membership does not depend on which side finishes first. docker.io's
+      # postinst reuses an existing docker group.
+      "getent group docker >/dev/null || groupadd --system docker",
       "id -u semaphore >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin semaphore",
+      "usermod -aG docker semaphore",
       "chmod 0600 /etc/semaphore/runner-config.json",
       "chmod 0644 /etc/systemd/system/semaphore-runner.service",
       "chown -R semaphore:semaphore /etc/semaphore",
