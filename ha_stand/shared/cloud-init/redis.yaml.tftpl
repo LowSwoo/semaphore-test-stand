@@ -50,7 +50,10 @@ runcmd:
     # --- redis-sentinel ---------------------------------------------------------
     # Keep the packaged daemonize/pidfile/logfile/dir/supervised lines (they match the
     # systemd unit), drop the stock monitoring block and network settings, append ours.
-    sed -i -E '/^(sentinel |port |bind |protected-mode |requirepass )/d' /etc/redis/sentinel.conf
+    # Also drop `user` lines: Sentinel started by the package install rewrites this file
+    # with `user default on nopass ...`, and ACL `user` directives win over requirepass,
+    # so the default user would stay passwordless and protected-mode would DENY peers.
+    sed -i -E '/^(sentinel |port |bind |protected-mode |requirepass |user )/d' /etc/redis/sentinel.conf
     cat >> /etc/redis/sentinel.conf <<EOF
 
     # --- managed by cloud-init (ha_stand) ---
