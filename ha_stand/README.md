@@ -19,6 +19,7 @@ runners) — driven by wrapper scripts in [`do/`](do). See
 | Semaphore runners    | 1+    | Defined in the workspace `config.yml`            |
 | PostgreSQL           | 1     | Shared database for the cluster                  |
 | Redis Sentinel       | 2     | 1 master + 1 replica, Sentinel on each node      |
+| Identity providers   | 0–1   | Optional `idp` droplet: OpenLDAP and/or Dex      |
 
 All nodes join private VPCs so cloud-init can wire services together at boot.
 The UI nodes share the same `access_key_encryption` key, which is what lets
@@ -44,6 +45,9 @@ Each role boots from a dedicated cloud-init template under
   at the Sentinels (`ha.engine: redis_sentinel`), runs DB migrations on boot.
 - **runner** — runs a Semaphore runner that registers with the cluster through
   the load balancer.
+- **idp** (optional) — runs OpenLDAP and/or Dex with Docker Compose for the
+  SSO checks; created only when the workspace enables `identity_providers`
+  (see [Identity providers](#identity-providers-ldap--dex)).
 
 ## Redis Sentinel (HA coordination)
 
@@ -85,6 +89,113 @@ REDISCLI_AUTH=<redis_password>          redis-cli INFO replication
 REDISCLI_AUTH=<redis_sentinel_password> redis-cli -p 26379 SENTINEL get-master-addr-by-name semaphore
 systemctl stop redis-server             # on the master: forces a failover
 ```
+
+## Identity providers (LDAP + Dex)
+
+An optional `idp` droplet turns the stand into an SSO stand. It is switched on
+by the `identity_providers` block of the workspace `config.yml`; a missing block
+or key means `false`, so stands without it plan exactly as before:
+
+```yaml
+identity_providers:
+  ldap: true    # OpenLDAP + Semaphore's ldap_* settings
+  dex: true     # Dex + Semaphore's oidc_providers
+```
+
+With either flag on, the server module creates one `idp` droplet in the cluster
+VPC that runs the enabled services with Docker Compose
+([`shared/cloud-init/idp.yaml.tftpl`](shared/cloud-init/idp.yaml.tftpl)):
+
+| Service  | Image                                | Exposure                                                         | Semaphore config                         |
+| -------- | ------------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- |
+| OpenLDAP | `osixia/openldap:1.5.0`              | plain LDAP `:389`, open to `cluster_ip_range` only               | `ldap_*` (no TLS, bind as `cn=admin`)    |
+| Dex      | `ghcr.io/dexidp/dex:v2.45.1-alpine`  | `:80` behind proxied `<prefix>-dex.<parent_domain>`, Cloudflare edge ranges only | `oidc_providers.dex` + `oidc_providers.unavailable` |
+
+LDAP and Dex are two **independent** login methods: Dex has no LDAP connector
+and authenticates its own static users. `unavailable` is a deliberately
+unreachable OIDC provider (`http://127.0.0.1:1/oidc`) kept from the fixtures for
+the provider-failure check.
+
+Directory, users, client and secrets mirror the integration-tests fixtures
+(`test-environment/profiles/feature-ldap-tls` and `feature-oidc-local`), so the
+tests run against the stand unchanged:
+
+| Provider | Login                       | Password                       | Purpose                                          |
+| -------- | --------------------------- | ------------------------------ | ------------------------------------------------ |
+| LDAP     | `ldap.user`                 | `Bookwright-LDAP-42!`          | regular directory login                          |
+| LDAP     | `ldap.invalid`              | `Bookwright-LDAP-Invalid-42!`  | wrong-password checks                            |
+| LDAP     | `ldap-admin-conflict`       | `Bookwright-LDAP-Conflict-42!` | `mail: admin@localhost`, collides with the admin |
+| Dex      | `oidc.user@bookwright.test` | `Bookwright-OIDC-42!`          | regular OIDC login                               |
+| Dex      | `admin@localhost`           | `Bookwright-OIDC-Conflict-42!` | collides with the admin by email                 |
+
+The LDAP base DN is `dc=bookwright,dc=test`, users live under
+`ou=people,dc=bookwright,dc=test` (`shared/idp/50-bookwright-users.ldif`); Dex
+serves the `semaphore` client (`shared/idp/dex.yaml.tftpl`). The two secrets,
+`ldap_admin_password` (OpenLDAP admin and Semaphore's bind password) and
+`dex_client_secret`, default to the fixture values in
+[`do/server/variables.tf`](do/server/variables.tf) — they are public test
+values, not real secrets — and can be overridden with `TF_VAR_ldap_admin_password`
+/ `TF_VAR_dex_client_secret`. With the flag on, the Semaphore admin email is
+forced to `admin@localhost` (instead of `semaphore_admin_email`) so the
+conflict users above really collide with the local admin. The email is set
+only when the bootstrap node creates the admin in an empty database, so enable
+the block on a fresh stand; on an existing one the admin keeps its old email
+until it is changed by hand.
+
+The server module adds two outputs: `idp_server` (public and private IP of the
+droplet) and `dex_issuer_url` (`https://<prefix>-dex.<parent_domain>/dex`, the
+`provider_url` of `oidc_providers.dex`); both are `null` when the feature is off.
+
+**Semaphore version.** The SSO stand needs **Semaphore ≥ 2.20.16-beta8**: the
+`2.20.16-beta5` default from `variables.tf` / `.env.example` is not published,
+so set it explicitly:
+
+```sh
+TF_VAR_semaphore_version="2.20.16-beta8"
+```
+
+**Cloudflare SSL mode.** Dex is published exactly like the load balancer —
+proxied record, TLS at the Cloudflare edge, plain HTTP to the origin — so it
+relies on the zone SSL mode being **Flexible**. A 525/526 on the discovery URL
+means the zone setting, not the stand. The Semaphore nodes also fetch Dex
+discovery through this public URL (the issuer must match what the browser
+sees), so OIDC login breaks the same way if the zone is not Flexible.
+
+**Replacing the `idp` droplet.** Its private IP is part of the UI nodes'
+`user_data` (`ldap_server`), so replacing `idp` (or toggling the flags) replaces
+all UI nodes, which in turn re-mints the admin token. Re-apply the runner module
+afterwards (`./up.sh <name>` does both).
+
+Useful checks (`<prefix>-lb.<domain>` is the `semaphore_url` output):
+
+```sh
+# Dex discovery through Cloudflare — 200 with the issuer https://<prefix>-dex.<domain>/dex
+curl https://<prefix>-dex.<domain>/dex/.well-known/openid-configuration
+
+# LDAP from a UI node (ldapsearch is not installed there by default)
+apt-get install -y ldap-utils
+ldapsearch -x -H ldap://<idp private ip>:389 \
+  -D 'cn=admin,dc=bookwright,dc=test' -w 'Bookwright-LDAP-Bind-42!' \
+  -b 'ou=people,dc=bookwright,dc=test' '(uid=ldap.user)'
+
+# LDAP login through Semaphore — 204
+curl -i -X POST https://<prefix>-lb.<domain>/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"auth":"ldap.user","password":"Bookwright-LDAP-42!","method":"ldap"}'
+
+# Provider failure — 500
+curl -i https://<prefix>-lb.<domain>/api/auth/oidc/unavailable/login
+```
+
+Dex login is checked in a browser: the login page of `semaphore_url` shows a
+"Bookwright Dex" button that redirects to Dex; sign in as
+`oidc.user@bookwright.test` / `Bookwright-OIDC-42!` and Dex returns you to
+Semaphore logged in (`skipApprovalScreen` is on).
+
+**Known defect, not a stand bug.** LDAP login as `ldap-admin-conflict` answers
+`500` instead of the expected `401` (successful bind, then a unique-constraint
+failure on the email). It is tracked in the integration tests'
+`test-environment/known-defects.md`.
 
 ## Admin token hand-over (Cloudflare R2 / S3)
 

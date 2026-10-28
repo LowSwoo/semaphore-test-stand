@@ -61,12 +61,24 @@ ha_disabled: false                 # true = run without HA mode
 redis_nodes: 2                     # Redis droplets: 1 master + (N-1) replicas, Sentinel on each (optional, default 2)
 redis_sentinel_quorum: 1           # Sentinels that must agree the master is down (optional, default 1)
 redis_master_name: semaphore       # master name in `sentinel monitor` and in Semaphore's ha.redis_sentinel.master_name (optional)
+
+identity_providers:                # SSO stand: optional idp droplet (optional, both default false)
+  ldap: true                       # OpenLDAP in the VPC + Semaphore's ldap_* settings
+  dex: true                        # Dex at <name>-dex.<parent_domain> + Semaphore's oidc_providers
 ```
 
 The three `redis_*` keys are optional. With 2 nodes and quorum 1 a single
 surviving Sentinel can promote the replica; quorum 2 would need both Sentinels
 alive and makes failover impossible once one node is lost. For a production-like
 setup use `redis_nodes: 3` and `redis_sentinel_quorum: 2`.
+
+`identity_providers` is optional too; a missing block or key means `false` and
+the stand plans exactly as without it. Either flag adds an `idp` droplet running
+OpenLDAP and/or Dex with the integration-tests fixture users, sets the Semaphore
+admin email to `admin@localhost` and needs `TF_VAR_semaphore_version` ≥
+`2.20.16-beta8`. Enable it on a fresh stand: toggling it later replaces the UI
+nodes. See
+[ha_stand/README.md](../ha_stand/README.md#identity-providers-ldap--dex).
 
 Commenting runner entries in or out and re-applying the `runner` module is the
 intended way to scale runners up and down.

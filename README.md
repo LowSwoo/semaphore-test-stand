@@ -50,6 +50,8 @@ root modules — [`server/`](ha_stand/do/server) (the cluster) and
 [`runner/`](ha_stand/do/runner) (the task runners) — driven by wrapper scripts in
 [`ha_stand/do/`](ha_stand/do). Nodes are configured at boot through the cloud-init
 templates in [`ha_stand/shared/`](ha_stand/shared).
+Optionally (`identity_providers` in the workspace `config.yml`) it adds an
+`idp` droplet with OpenLDAP and/or Dex for SSO testing.
 
 DNS and TLS are handled by **Cloudflare**: the load balancer is published as a
 proxied `<name>-lb.<parent_domain>` record in the Cloudflare-hosted parent
