@@ -13,6 +13,7 @@ resource "digitalocean_project_resources" "main" {
   resources = concat(
     [for d in digitalocean_droplet.cluster : d.urn],
     [for d in digitalocean_droplet.redis_replica : d.urn],
+    [for d in digitalocean_droplet.idp : d.urn],
     [
       digitalocean_droplet.postgres.urn,
       digitalocean_droplet.redis_master.urn,

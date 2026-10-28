@@ -1,0 +1,35 @@
+# Dex for the SSO stand. Mirrors the integration-tests fixture
+# test-environment/profiles/feature-oidc-local/dex.yaml: same client and static
+# users (bcrypt hashes of the passwords in SemaphoreOidcFixtures.java). Only the
+# issuer and the redirect URI point at the stand. No connectors: Dex is a login
+# method of its own and is deliberately not wired to the stand's OpenLDAP.
+issuer: ${issuer}
+
+storage:
+  type: sqlite3
+  config:
+    file: /var/dex/dex.db
+
+web:
+  http: 0.0.0.0:5556
+
+oauth2:
+  skipApprovalScreen: true
+
+staticClients:
+  - id: semaphore
+    name: Semaphore
+    secret: ${client_secret}
+    redirectURIs:
+      - ${redirect_uri}
+
+enablePasswordDB: true
+staticPasswords:
+  - email: oidc.user@bookwright.test
+    hash: $2y$10$083AJsRwhLY53laxO1YKjueHo0C2KvzSlSgPugUp5xWCiE0AquTTe
+    username: oidc.user@bookwright.test
+    userID: 2d3f3c3a-493f-4b65-b617-13f07414c28e
+  - email: admin@localhost
+    hash: $2y$10$KoyJAV23DRbseGM7J5zN6ud0m1Ug1f5ZHwkBG5mfQ.MHAGng/6w.W
+    username: admin@localhost
+    userID: fa0d5bc1-9ccb-43f2-a140-d983bb9751c3

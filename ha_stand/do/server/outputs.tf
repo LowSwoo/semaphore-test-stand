@@ -58,3 +58,16 @@ output "admin_token_s3_uri" {
   description = "S3 URI of the admin API token read by the runner module."
   value       = "s3://${aws_s3_bucket.stand.id}/${aws_s3_object.admin_token.key}"
 }
+
+output "idp_server" {
+  description = "Identity providers droplet (OpenLDAP + Dex); null without identity_providers in config.yml."
+  value = local.idp_enabled ? {
+    public_ip  = digitalocean_droplet.idp[0].ipv4_address
+    private_ip = digitalocean_droplet.idp[0].ipv4_address_private
+  } : null
+}
+
+output "dex_issuer_url" {
+  description = "Dex OIDC issuer (= provider_url in Semaphore's oidc_providers.dex); null when Dex is disabled."
+  value       = local.dex_enabled ? local.dex_issuer : null
+}

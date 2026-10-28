@@ -31,11 +31,20 @@ resource "digitalocean_droplet" "cluster" {
     access_key_encryption   = var.semaphore_access_key_encryption
     admin_user              = var.semaphore_admin_user
     admin_password          = var.semaphore_admin_password
-    admin_email             = var.semaphore_admin_email
+    admin_email             = local.admin_email
     semaphore_version       = var.semaphore_version
     node_index              = count.index + 1
     subscription_key        = local.config.subscription_key
     ha_enabled              = local.config.ha_disabled ? "false" : "true"
+    # Identity providers (idp.tf); the blocks render to nothing when disabled.
+    ldap_enabled       = local.ldap_enabled
+    ldap_server        = local.ldap_enabled ? "${digitalocean_droplet.idp[0].ipv4_address_private}:389" : ""
+    ldap_bind_dn       = local.ldap_bind_dn
+    ldap_bind_password = var.ldap_admin_password
+    ldap_search_dn     = local.ldap_search_dn
+    dex_enabled        = local.dex_enabled
+    dex_issuer         = local.dex_issuer
+    dex_client_secret  = var.dex_client_secret
   })
 
   depends_on = [digitalocean_droplet.cluster[0]]

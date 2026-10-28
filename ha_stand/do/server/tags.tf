@@ -15,3 +15,8 @@ resource "digitalocean_tag" "database" {
 resource "digitalocean_tag" "redis" {
   name = "${local.prefix}-redis"
 }
+
+resource "digitalocean_tag" "idp" {
+  count = local.idp_enabled ? 1 : 0
+  name  = "${local.prefix}-idp"
+}
