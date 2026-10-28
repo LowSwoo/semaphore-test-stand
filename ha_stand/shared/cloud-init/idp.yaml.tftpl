@@ -1,6 +1,6 @@
 #cloud-config
 # Identity providers of the SSO stand, run with Docker Compose on one droplet:
-#   ldap - OpenLDAP (plain LDAP :389, reachable from the VPC only, see firewall.tf)
+#   ldap - OpenLDAP (plain LDAP :389, reachable from the VPC only, see idp.tf)
 #   dex  - Dex OIDC provider, published on :80 behind a proxied Cloudflare record
 # The two are independent login methods; Dex has no LDAP connector. Images,
 # directory and users come from the integration-tests fixtures
