@@ -32,8 +32,10 @@ balancer itself serves plain HTTP.
 
 ## Software provisioning (cloud-init)
 
-Each role boots from a dedicated cloud-init template under
-[`shared/cloud-init/`](shared/cloud-init):
+Each role boots from a dedicated cloud-init template. Postgres, Redis and the
+Semaphore nodes come from the shared modules in [`../modules/do/`](../modules/do)
+(each keeps its template in `templates/`, the SSO stand uses the same modules);
+the runner template lives in [`shared/cloud-init/`](shared/cloud-init):
 
 - **postgres** — installs PostgreSQL, binds to its private IP, creates the
   Semaphore database/user, allows access from the private network.

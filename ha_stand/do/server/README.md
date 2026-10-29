@@ -53,17 +53,19 @@ regions and front it with DigitalOcean global load balancing / DNS.
 
 ## Software provisioning (cloud-init)
 
-Each role boots with a dedicated cloud-init template in [cloud-init/](cloud-init/):
+Each role boots with a dedicated cloud-init template, kept next to its shared
+module in [modules/do/](../../../modules/do) (the runner one in
+[ha_stand/shared/cloud-init/](../../shared/cloud-init)):
 
 - **postgres** — installs PostgreSQL, discovers its private IP from the
   DigitalOcean metadata service, binds to it, creates the Semaphore
   database/user, and allows `scram-sha-256` access from the VPC.
 - **redis** — installs `redis-server` + `redis-sentinel` from packages.redis.io,
-  binds both to the private IP and sets passwords. `redis_master` boots as the
-  replication master, `redis_replica` droplets get `replicaof <master>` and wait
+  binds both to the private IP and sets passwords. `redis-1` boots as the
+  replication master, the other droplets get `replicaof <master>` and wait
   for the master before starting. Each Sentinel monitors `redis_master_name` at
   the master's private IP with `redis_sentinel_quorum` ([database.tf](database.tf),
-  [../../shared/cloud-init/redis.yaml.tftpl](../../shared/cloud-init/redis.yaml.tftpl)).
+  [modules/do/redis](../../../modules/do/redis/templates/redis.yaml.tftpl)).
 - **semaphore** — installs Docker, writes `/etc/semaphore/config.yml` pointing
   at Postgres and at the Sentinel list (`ha.engine: redis_sentinel`, private
   IPs injected by Terraform), runs DB migrations,

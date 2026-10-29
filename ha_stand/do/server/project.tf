@@ -11,11 +11,10 @@ resource "digitalocean_project" "main" {
 resource "digitalocean_project_resources" "main" {
   project = digitalocean_project.main.id
   resources = concat(
-    [for d in digitalocean_droplet.cluster : d.urn],
-    [for d in digitalocean_droplet.redis_replica : d.urn],
+    module.semaphore.urns,
+    module.redis.urns,
     [
-      digitalocean_droplet.postgres.urn,
-      digitalocean_droplet.redis_master.urn,
+      module.postgres.urn,
       digitalocean_loadbalancer.main.urn,
     ],
   )

@@ -18,7 +18,7 @@ write_files:
         pass: "${db_password}"
         name: "${db_name}"
       dialect: postgres
-      port: ":3000"
+      port: ":${port}"
       web_host: "${web_root}"
       cookie_hash: "${cookie_hash}"
       cookie_encryption: "${cookie_encryption}"
@@ -28,6 +28,7 @@ write_files:
       runners:
         offline_timeout_sec: 60
         task_fail_timeout_sec: 120
+%{ if redis_enabled ~}
       ha:
         enabled: ${ha_enabled}
         node_id: node${node_index}
@@ -40,9 +41,13 @@ write_files:
       %{~ endfor }
           sentinel_pass: "${redis_sentinel_password}"
           pass: "${redis_password}"
-      use_remote_runner: true
+%{ endif ~}
+      use_remote_runner: ${use_remote_runner}
       subscription:
         key: "${subscription_key}"
+%{ if extra_config != "" ~}
+      ${indent(6, extra_config)}
+%{ endif ~}
 
 
   - path: /etc/systemd/system/semaphore.service
@@ -59,6 +64,10 @@ write_files:
       Type=simple
       User=semaphore
       Group=semaphore
+%{ if port < 1024 ~}
+      # Privileged port (Cloudflare proxies only to :80 and friends).
+      AmbientCapabilities=CAP_NET_BIND_SERVICE
+%{ endif ~}
       ExecStart=/usr/local/bin/semaphore server --config /etc/semaphore/config.yml
       Restart=on-failure
       RestartSec=5

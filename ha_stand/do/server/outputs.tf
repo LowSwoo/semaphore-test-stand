@@ -15,38 +15,26 @@ output "load_balancer_ip" {
 
 output "cluster_servers" {
   description = "Semaphore UI cluster droplets."
-  value = {
-    for d in digitalocean_droplet.cluster : d.name => {
-      region     = d.region
-      public_ip  = d.ipv4_address
-      private_ip = d.ipv4_address_private
-    }
-  }
+  value       = module.semaphore.nodes
 }
 
 
 output "postgres_server" {
   description = "PostgreSQL droplet."
   value = {
-    public_ip  = digitalocean_droplet.postgres.ipv4_address
-    private_ip = digitalocean_droplet.postgres.ipv4_address_private
+    public_ip  = module.postgres.public_ip
+    private_ip = module.postgres.private_ip
   }
 }
 
 output "redis_servers" {
   description = "Redis Sentinel cluster droplets (redis-1 boots as master, the rest as replicas)."
-  value = {
-    for d in concat([digitalocean_droplet.redis_master], digitalocean_droplet.redis_replica) : d.name => {
-      region     = d.region
-      public_ip  = d.ipv4_address
-      private_ip = d.ipv4_address_private
-    }
-  }
+  value       = module.redis.servers
 }
 
 output "redis_sentinel_addrs" {
   description = "Sentinel endpoints (host:port) as configured in Semaphore's ha.redis_sentinel.addrs."
-  value       = local.redis_sentinel_addrs
+  value       = module.redis.sentinel_addrs
 }
 
 output "s3_bucket" {

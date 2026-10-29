@@ -7,13 +7,13 @@
 # ssh picks the key up from your ssh-agent (same as the droplet connection blocks).
 resource "terraform_data" "fetch_admin_token" {
   # Re-mint whenever the bootstrap node is (re)created.
-  triggers_replace = [digitalocean_droplet.cluster[0].id]
+  triggers_replace = [module.semaphore.bootstrap_node.id]
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-c"]
 
     environment = {
-      IP         = digitalocean_droplet.cluster[0].ipv4_address
+      IP         = module.semaphore.bootstrap_node.public_ip
       ADMIN_USER = var.semaphore_admin_user
       DEST       = "${local.api_token_path}"
     }

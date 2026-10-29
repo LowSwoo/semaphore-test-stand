@@ -24,5 +24,5 @@ resource "digitalocean_loadbalancer" "main" {
     unhealthy_threshold      = 3
   }
 
-  depends_on = [digitalocean_droplet.cluster]
+  depends_on = [module.semaphore]
 }
