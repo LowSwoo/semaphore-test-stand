@@ -31,13 +31,15 @@ stand), and its name must match the workspace name:
 
 ```
 workspaces/
-  example/            # committed template — copy it to start a new stand
+  example/            # committed template of an ha_stand stand
+    config.yml
+  example-sso/        # committed template of an sso_stand stand
     config.yml
   <name>/             # one directory per stand, gitignored (may hold secrets)
     config.yml        # stand definition, written by hand (required)
 ```
 
-Everything except `example/` is gitignored (see the repo root
+Everything except the `example*/` templates is gitignored (see the repo root
 [.gitignore](../.gitignore)): `config.yml` contains the subscription key.
 
 ## Files
@@ -81,6 +83,23 @@ module reads that object to call the Semaphore API when registering runners (see
 [ha_stand/README.md](../ha_stand/README.md#admin-token-hand-over-cloudflare-r2--s3)). If it
 is lost or invalid, taint/replace `terraform_data.fetch_admin_token` in the
 `server` module to re-mint and re-upload it.
+
+### SSO stand `config.yml`
+
+[`sso_stand/do`](../sso_stand) reads a shorter file (template:
+[`example-sso/config.yml`](example-sso/config.yml)):
+
+```yaml
+subscription_key: "<semaphore pro subscription key>"
+cluster_ip_range: 10.10.30.0/24   # VPC of the stand
+identity_providers:               # optional, both default to true
+  ldap: true
+  dex: true
+```
+
+A workspace name belongs to one stand type: both write DigitalOcean tags,
+firewalls and Cloudflare records prefixed with it. See
+[sso_stand/README.md](../sso_stand/README.md).
 
 ## Creating a new stand
 

@@ -17,10 +17,13 @@ The repo contains following stands and projects:
 | -------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | [`ansible_vaults_test_project`](ansible_vaults_test_project)   | Application    | Configures resources *inside* a running Semaphore instance — projects, keys, repositories, inventories, environments, and templates.    | [ansible_vaults_test_project/README.md](ansible_vaults_test_project/README.md) |
 | [`ha_stand`](ha_stand)   | Infrastructure | Provisions a complete Semaphore UI *cluster* (load balancer + UI nodes + PostgreSQL + Redis + runners) on DigitalOcean.                  | [ha_stand/README.md](ha_stand/README.md) |
+| [`sso_stand`](sso_stand) | Infrastructure | Provisions one Semaphore UI node + PostgreSQL + an `idp` droplet with OpenLDAP and Dex on DigitalOcean, for LDAP and OIDC login tests. | [sso_stand/README.md](sso_stand/README.md) |
 
-The two are independent: `ansible_vaults_test_project` targets any reachable Semaphore API (typically
-a local instance), while `ha_stand` stands up the cloud infrastructure that
-Semaphore itself runs on.
+They are independent: `ansible_vaults_test_project` targets any reachable Semaphore API (typically
+a local instance), while `ha_stand` and `sso_stand` stand up the cloud
+infrastructure that Semaphore itself runs on. The two stands have separate
+root modules, state and `.env`, and build their droplets from the shared
+modules in [`modules/`](modules) (see [modules/README.md](modules/README.md)).
 
 ## ansible_vaults_test_project — Semaphore resources
 
@@ -48,8 +51,9 @@ several stateless UI nodes that share one PostgreSQL database and one Redis
 instance, plus a pool of runners. The deployment is split into two Terraform
 root modules — [`server/`](ha_stand/do/server) (the cluster) and
 [`runner/`](ha_stand/do/runner) (the task runners) — driven by wrapper scripts in
-[`ha_stand/do/`](ha_stand/do). Nodes are configured at boot through the cloud-init
-templates in [`ha_stand/shared/`](ha_stand/shared).
+[`ha_stand/do/`](ha_stand/do). Postgres, Redis and the UI nodes come from the
+shared modules in [`modules/do/`](modules/do), which also hold their cloud-init
+templates; the runner templates live in [`ha_stand/shared/`](ha_stand/shared).
 
 DNS and TLS are handled by **Cloudflare**: the load balancer is published as a
 proxied `<name>-lb.<parent_domain>` record in the Cloudflare-hosted parent
@@ -80,26 +84,59 @@ are already gone.
 See [ha_stand/README.md](ha_stand/README.md) and
 [ha_stand/do/server/README.md](ha_stand/do/server/README.md) for details.
 
+## sso_stand — LDAP and OIDC login
+
+One Semaphore UI node on `:80` behind a proxied `<name>-ui.<parent_domain>`
+record, a PostgreSQL droplet and an `idp` droplet with OpenLDAP (VPC only) and
+Dex (`<name>-dex.<parent_domain>`). No Redis, load balancer or runners.
+Directory, users and secrets are the integration-tests fixtures, so the SSO
+tests run against it unchanged.
+
+```sh
+cd sso_stand
+cp .env.example .env
+cp -r ../workspaces/example-sso ../workspaces/sso1
+
+cd do
+./up.sh sso1
+./down.sh sso1
+```
+
+See [sso_stand/README.md](sso_stand/README.md) for the providers, fixture users
+and checks.
+
 ## Repository layout
 
 ```
 .
 ├── ansible_vaults_test_project/                 # Semaphore resources via the semaphoreui provider
-├── ha_stand/                 # Cloud cluster infrastructure
+├── modules/do/             # shared DigitalOcean modules (+ their cloud-init templates)
+│   ├── postgres/           #   PostgreSQL droplet
+│   ├── redis/              #   Redis Sentinel cluster
+│   ├── semaphore/          #   Semaphore UI nodes
+│   └── idp/                #   OpenLDAP + Dex droplet
+├── ha_stand/               # Cloud cluster infrastructure
 │   ├── .env.example        #   TF_VAR_* credentials/settings template
 │   ├── do/                 #   DigitalOcean deployment
 │   │   ├── server/         #     load balancer + UI cluster + Postgres + Redis
 │   │   ├── runner/         #     task runners
 │   │   └── up.sh, down*.sh #     wrapper scripts (take a workspace name)
-│   └── shared/             #   cloud-init templates and runner config
+│   └── shared/             #   runner cloud-init template and config
+├── sso_stand/              # SSO stand: Semaphore + Postgres + OpenLDAP/Dex
+│   ├── .env.example
+│   └── do/                 #   root module + up.sh, down.sh
 └── workspaces/             # per-stand config (one dir per Terraform workspace)
-    └── example/            #   committed template — copy to start a new stand
+    ├── example/            #   template of an ha_stand stand
+    └── example-sso/        #   template of an sso_stand stand
 ```
 
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5
 - For `ansible_vaults_test_project`: a reachable Semaphore instance and an API token
+- For `sso_stand`: a DigitalOcean API token and SSH key, a Cloudflare API token
+  (DNS edit + zone read) for a zone in SSL mode Flexible, [OpenTofu](https://opentofu.org)
+  (the scripts call `tofu`)
 - For `ha_stand`:
   - A DigitalOcean API token and an SSH key uploaded to DigitalOcean (the
     matching key loaded in your `ssh-agent` — Terraform connects over SSH to
