@@ -14,9 +14,3 @@ ha_disabled: false
 redis_nodes: 2
 redis_sentinel_quorum: 1
 redis_master_name: semaphore
-
-# Optional SSO stand: an idp droplet with OpenLDAP and/or Dex (fixture users from
-# integration-tests). Missing block or key = false. Needs Semaphore >= 2.20.16-beta8.
-# identity_providers:
-#   ldap: true
-#   dex: true

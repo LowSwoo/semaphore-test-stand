@@ -155,22 +155,3 @@ variable "s3_bucket" {
   type        = string
   default     = ""
 }
-
-# --- Identity providers (SSO stand, identity_providers in config.yml) --------
-# Defaults are the public integration-tests fixture values, not real secrets:
-# the tests log in with the fixture users, and keeping them here (not in
-# .env.example) leaves preflight's example-value check meaningful.
-
-variable "ldap_admin_password" {
-  description = "OpenLDAP admin (cn=admin,dc=bookwright,dc=test) password, also Semaphore's LDAP bind password. Fixture: profiles/feature-ldap-tls/ldap.yml."
-  type        = string
-  default     = "Bookwright-LDAP-Bind-42!"
-  sensitive   = true
-}
-
-variable "dex_client_secret" {
-  description = "Secret of the 'semaphore' OIDC client in Dex. Fixture: profiles/feature-oidc-local/dex.yaml."
-  type        = string
-  default     = "semaphore-test-client-secret"
-  sensitive   = true
-}

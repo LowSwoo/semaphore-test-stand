@@ -43,43 +43,6 @@ write_files:
       use_remote_runner: true
       subscription:
         key: "${subscription_key}"
-%{ if ldap_enabled ~}
-      ldap_enable: true
-      ldap_server: "${ldap_server}"
-      ldap_needtls: false
-      ldap_binddn: "${ldap_bind_dn}"
-      ldap_bindpassword: "${ldap_bind_password}"
-      ldap_searchdn: "${ldap_search_dn}"
-      ldap_searchfilter: "(&(objectClass=inetOrgPerson)(uid=%s))"
-      ldap_mappings:
-        dn: dn
-        uid: uid
-        cn: cn
-        mail: mail
-%{ endif ~}
-%{ if dex_enabled ~}
-      oidc_providers:
-        dex:
-          display_name: "Bookwright Dex"
-          provider_url: "${dex_issuer}"
-          client_id: "semaphore"
-          client_secret: "${dex_client_secret}"
-          redirect_url: "${web_root}/api/auth/oidc/dex/redirect"
-          username_claim: "email"
-          name_claim: "email"
-          return_via_state: true
-        # Deliberately unreachable provider (integration-tests fixture) for the
-        # provider-failure check: its login answers 500.
-        unavailable:
-          display_name: "Unavailable OIDC"
-          provider_url: "http://127.0.0.1:1/oidc"
-          client_id: "unavailable"
-          client_secret: "unavailable-test-client-secret"
-          redirect_url: "${web_root}/api/auth/oidc/unavailable/redirect"
-          username_claim: "email"
-          name_claim: "email"
-          return_via_state: true
-%{ endif ~}
 
 
   - path: /etc/systemd/system/semaphore.service
