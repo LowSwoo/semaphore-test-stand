@@ -1,0 +1,83 @@
+#cloud-config
+# Identity providers of the SSO stand, run with Docker Compose on one droplet:
+#   ldap - OpenLDAP (plain LDAP :389, reachable from the VPC only, see main.tf)
+#   dex  - Dex OIDC provider, published on :80 behind a proxied Cloudflare record
+# The two are independent login methods; Dex has no LDAP connector. Images,
+# directory and users come from the integration-tests fixtures
+# (profiles/feature-ldap-tls, profiles/feature-oidc-local).
+package_update: true
+package_upgrade: false
+packages:
+  - docker.io
+  - docker-compose-v2
+
+write_files:
+  - path: /opt/idp/docker-compose.yml
+    permissions: "0600"
+    content: |
+      services:
+%{ if ldap_enabled ~}
+        ldap:
+          image: osixia/openldap:1.5.0
+          hostname: ldap
+          restart: unless-stopped
+          ports:
+            - "389:389"
+          environment:
+            LDAP_ORGANISATION: Bookwright
+            LDAP_DOMAIN: bookwright.test
+            LDAP_BASE_DN: ${ldap_base_dn}
+            LDAP_ADMIN_PASSWORD: "${ldap_admin_password}"
+            LDAP_TLS: "false"
+            LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
+          volumes:
+            - /opt/idp/ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom
+            - ldap-data:/var/lib/ldap
+            - ldap-config:/etc/ldap/slapd.d
+          healthcheck:
+            test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost:389 -D '${ldap_bind_dn}' -w \"$$LDAP_ADMIN_PASSWORD\" -b '${ldap_base_dn}' -s base >/dev/null"]
+            interval: 2s
+            timeout: 3s
+            retries: 30
+%{ endif ~}
+%{ if dex_enabled ~}
+        dex:
+          image: ghcr.io/dexidp/dex:v2.45.1-alpine
+          command: ["dex", "serve", "/etc/dex/config.yaml"]
+          restart: unless-stopped
+          ports:
+            - "80:5556"
+          volumes:
+            - /opt/idp/dex.yaml:/etc/dex/config.yaml:ro
+            - dex-data:/var/dex
+          healthcheck:
+            test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5556/dex/.well-known/openid-configuration >/dev/null"]
+            interval: 2s
+            timeout: 2s
+            retries: 30
+%{ endif ~}
+      volumes:
+%{ if ldap_enabled ~}
+        ldap-data:
+        ldap-config:
+%{ endif ~}
+%{ if dex_enabled ~}
+        dex-data:
+%{ endif ~}
+%{ if ldap_enabled ~}
+  - path: /opt/idp/ldif/50-bookwright-users.ldif
+    permissions: "0644"
+    content: |
+      ${indent(6, ldap_users_ldif)}
+%{ endif ~}
+%{ if dex_enabled ~}
+  - path: /opt/idp/dex.yaml
+    # Read by the dex user (uid 1001) inside the container.
+    permissions: "0644"
+    content: |
+      ${indent(6, dex_config)}
+%{ endif ~}
+
+runcmd:
+  - systemctl enable --now docker
+  - docker compose -f /opt/idp/docker-compose.yml up -d --wait

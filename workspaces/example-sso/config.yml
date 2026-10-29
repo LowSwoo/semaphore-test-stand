@@ -1,0 +1,11 @@
+# Workspace config of an SSO stand (sso_stand/do). Copy the directory to
+# workspaces/<name>/ and run sso_stand/do/up.sh <name>.
+subscription_key: "<semaphore pro subscription key>"
+
+# VPC of the stand; must not overlap with other stands in the same region.
+cluster_ip_range: 10.10.30.0/24
+
+# Identity providers on the idp droplet; both default to true.
+identity_providers:
+  ldap: true     # OpenLDAP in the VPC + Semaphore's ldap_* settings
+  dex: true      # Dex at <name>-dex.<parent_domain> + Semaphore's oidc_providers

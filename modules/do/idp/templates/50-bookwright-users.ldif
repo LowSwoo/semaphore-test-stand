@@ -1,0 +1,27 @@
+dn: ou=people,dc=bookwright,dc=test
+objectClass: organizationalUnit
+ou: people
+
+dn: uid=ldap.user,ou=people,dc=bookwright,dc=test
+objectClass: inetOrgPerson
+uid: ldap.user
+cn: LDAP Test User
+sn: User
+mail: ldap.user@bookwright.test
+userPassword: Bookwright-LDAP-42!
+
+dn: uid=ldap.invalid,ou=people,dc=bookwright,dc=test
+objectClass: inetOrgPerson
+uid: ldap.invalid
+cn: LDAP Invalid Password User
+sn: User
+mail: ldap.invalid@bookwright.test
+userPassword: Bookwright-LDAP-Invalid-42!
+
+dn: uid=ldap-admin-conflict,ou=people,dc=bookwright,dc=test
+objectClass: inetOrgPerson
+uid: ldap-admin-conflict
+cn: LDAP Local Account Conflict
+sn: Conflict
+mail: admin@localhost
+userPassword: Bookwright-LDAP-Conflict-42!
