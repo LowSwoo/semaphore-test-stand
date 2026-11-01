@@ -17,7 +17,7 @@ output "postgres_server" {
 }
 
 output "idp_server" {
-  description = "Identity providers droplet (OpenLDAP + Dex + Keycloak)."
+  description = "Identity providers droplet (2x OpenLDAP + Dex + Keycloak)."
   value = {
     public_ip  = module.idp.public_ip
     private_ip = module.idp.private_ip

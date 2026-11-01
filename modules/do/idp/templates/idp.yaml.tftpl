@@ -1,6 +1,7 @@
 #cloud-config
 # Identity providers of the SSO stand, run with Docker Compose on one droplet:
-#   ldap     - OpenLDAP (plain LDAP :389, reachable from the VPC only, see main.tf)
+#   ldap     - OpenLDAP dc=bookwright,dc=test (plain LDAP :389, VPC only, see main.tf)
+#   ldap2    - second OpenLDAP dc=marlowe,dc=test (plain LDAP :390, VPC only)
 #   dex      - Dex OIDC provider, behind a proxied Cloudflare record
 #   keycloak - Keycloak OIDC provider (dev mode, realm imported at first start)
 #   proxy    - Caddy on :80 routing dex/keycloak by hostname (Caddyfile.tftpl)
@@ -38,6 +39,30 @@ write_files:
             - ldap-config:/etc/ldap/slapd.d
           healthcheck:
             test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost:389 -D '${ldap_bind_dn}' -w \"$$LDAP_ADMIN_PASSWORD\" -b '${ldap_base_dn}' -s base >/dev/null"]
+            interval: 2s
+            timeout: 3s
+            retries: 30
+%{ endif ~}
+%{ if ldap2_enabled ~}
+        ldap2:
+          image: osixia/openldap:1.5.0
+          hostname: ldap2
+          restart: unless-stopped
+          ports:
+            - "${ldap2_port}:389"
+          environment:
+            LDAP_ORGANISATION: Marlowe
+            LDAP_DOMAIN: marlowe.test
+            LDAP_BASE_DN: ${ldap2_base_dn}
+            LDAP_ADMIN_PASSWORD: "${ldap2_admin_password}"
+            LDAP_TLS: "false"
+            LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
+          volumes:
+            - /opt/idp/ldif2:/container/service/slapd/assets/config/bootstrap/ldif/custom
+            - ldap2-data:/var/lib/ldap
+            - ldap2-config:/etc/ldap/slapd.d
+          healthcheck:
+            test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost:389 -D '${ldap2_bind_dn}' -w \"$$LDAP_ADMIN_PASSWORD\" -b '${ldap2_base_dn}' -s base >/dev/null"]
             interval: 2s
             timeout: 3s
             retries: 30
@@ -102,6 +127,10 @@ write_files:
         ldap-data:
         ldap-config:
 %{ endif ~}
+%{ if ldap2_enabled ~}
+        ldap2-data:
+        ldap2-config:
+%{ endif ~}
 %{ if dex_enabled ~}
         dex-data:
 %{ endif ~}
@@ -113,6 +142,12 @@ write_files:
     permissions: "0644"
     content: |
       ${indent(6, ldap_users_ldif)}
+%{ endif ~}
+%{ if ldap2_enabled ~}
+  - path: /opt/idp/ldif2/50-marlowe-users.ldif
+    permissions: "0644"
+    content: |
+      ${indent(6, ldap2_users_ldif)}
 %{ endif ~}
 %{ if dex_enabled ~}
   - path: /opt/idp/dex.yaml

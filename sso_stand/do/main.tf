@@ -1,5 +1,5 @@
 # SSO stand: one Semaphore node with PostgreSQL and an idp droplet running
-# OpenLDAP, Dex and Keycloak, built from the same modules as ha_stand
+# two OpenLDAPs, Dex and Keycloak, built from the same modules as ha_stand
 # (modules/do/*).
 # No Redis/HA, no load balancer, no runners.
 
@@ -24,6 +24,7 @@ module "idp" {
 
   prefix           = local.prefix
   ldap_enabled     = local.ldap_enabled
+  ldap2_enabled    = local.ldap2_enabled
   dex_enabled      = local.dex_enabled
   keycloak_enabled = local.keycloak_enabled
 
@@ -39,6 +40,7 @@ module "idp" {
   cloudflare_zone_id      = data.cloudflare_zone.parent.id
   semaphore_web_root      = local.web_root
   ldap_admin_password     = var.ldap_admin_password
+  ldap2_admin_password    = var.ldap2_admin_password
   dex_client_secret       = var.dex_client_secret
   keycloak_admin_password = var.keycloak_admin_password
   keycloak_client_secret  = var.keycloak_client_secret

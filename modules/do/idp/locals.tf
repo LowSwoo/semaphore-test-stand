@@ -1,9 +1,15 @@
 locals {
-  # Directory and users come from the integration-tests fixture
+  # First directory and its users come from the integration-tests fixture
   # (profiles/feature-ldap-tls), so the tests run against the stand unchanged.
   ldap_base_dn   = "dc=bookwright,dc=test"
   ldap_bind_dn   = "cn=admin,${local.ldap_base_dn}"
   ldap_search_dn = "ou=people,${local.ldap_base_dn}"
+
+  # Second directory (ldap2): stand values, disjoint users, own port.
+  ldap2_base_dn   = "dc=marlowe,dc=test"
+  ldap2_bind_dn   = "cn=admin,${local.ldap2_base_dn}"
+  ldap2_search_dn = "ou=people,${local.ldap2_base_dn}"
+  ldap2_port      = 390
 
   # Dex and Keycloak are reached by the user's browser, so each gets its own
   # proxied hostname; the Semaphore nodes fetch discovery through the same URL,
@@ -16,26 +22,53 @@ locals {
   keycloak_issuer       = "https://${local.keycloak_hostname}/realms/${local.keycloak_realm}"
   keycloak_redirect_uri = "${var.semaphore_web_root}/api/auth/oidc/keycloak/redirect"
 
-  web_enabled = var.dex_enabled || var.keycloak_enabled
+  web_enabled  = var.dex_enabled || var.keycloak_enabled
+  ldap_enabled = var.ldap_enabled || var.ldap2_enabled
 
   # Keys of Semaphore's config.yml per provider; semaphore_config merges the
   # enabled ones for the semaphore module's extra_config. Kept here so the
   # issuers, clients and DNs cannot drift apart from the idp droplet.
-  ldap_config = {
-    ldap_enable       = true
-    ldap_server       = "${digitalocean_droplet.idp.ipv4_address_private}:389"
-    ldap_needtls      = false
-    ldap_binddn       = local.ldap_bind_dn
-    ldap_bindpassword = var.ldap_admin_password
-    ldap_searchdn     = local.ldap_search_dn
-    ldap_searchfilter = "(&(objectClass=inetOrgPerson)(uid=%s))"
-    ldap_mappings = {
-      dn   = "dn"
-      uid  = "uid"
-      cn   = "cn"
-      mail = "mail"
+  # Both directories go through ldap_providers (multi-provider config), not the
+  # legacy flat ldap_* keys; the provider id is the map key.
+  ldap_mappings = {
+    dn   = "dn"
+    uid  = "uid"
+    cn   = "cn"
+    mail = "mail"
+  }
+
+  ldap_provider = {
+    bookwright = {
+      display_name  = "Bookwright LDAP"
+      server        = "${digitalocean_droplet.idp.ipv4_address_private}:389"
+      need_tls      = false
+      bind_dn       = local.ldap_bind_dn
+      bind_password = var.ldap_admin_password
+      search_dn     = local.ldap_search_dn
+      search_filter = "(&(objectClass=inetOrgPerson)(uid=%s))"
+      mappings      = local.ldap_mappings
+      order         = 1
     }
   }
+
+  ldap2_provider = {
+    marlowe = {
+      display_name  = "Marlowe LDAP"
+      server        = "${digitalocean_droplet.idp.ipv4_address_private}:${local.ldap2_port}"
+      need_tls      = false
+      bind_dn       = local.ldap2_bind_dn
+      bind_password = var.ldap2_admin_password
+      search_dn     = local.ldap2_search_dn
+      search_filter = "(&(objectClass=inetOrgPerson)(uid=%s))"
+      mappings      = local.ldap_mappings
+      order         = 2
+    }
+  }
+
+  ldap_providers = merge(concat(
+    var.ldap_enabled ? [local.ldap_provider] : [],
+    var.ldap2_enabled ? [local.ldap2_provider] : [],
+  )...)
 
   dex_provider = {
     dex = {
@@ -87,7 +120,7 @@ locals {
   )...)
 
   semaphore_config = merge(concat(
-    var.ldap_enabled ? [local.ldap_config] : [],
+    local.ldap_enabled ? [{ ldap_providers = local.ldap_providers }] : [],
     local.web_enabled ? [{ oidc_providers = local.oidc_providers }] : [],
   )...)
 }

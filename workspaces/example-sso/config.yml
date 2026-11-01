@@ -7,6 +7,7 @@ cluster_ip_range: 10.10.30.0/24
 
 # Identity providers on the idp droplet; all default to true.
 identity_providers:
-  ldap: true     # OpenLDAP in the VPC + Semaphore's ldap_* settings
+  ldap: true     # OpenLDAP dc=bookwright in the VPC -> ldap_providers.bookwright
+  ldap2: true    # OpenLDAP dc=marlowe in the VPC    -> ldap_providers.marlowe
   dex: true      # Dex at <name>-dex.<parent_domain> + Semaphore's oidc_providers
   keycloak: true # Keycloak at <name>-kc.<parent_domain> (realm bookwright, group devops)

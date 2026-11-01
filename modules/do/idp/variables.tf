@@ -9,6 +9,12 @@ variable "ldap_enabled" {
   default     = true
 }
 
+variable "ldap2_enabled" {
+  description = "Run the second OpenLDAP (:390, VPC only; directory dc=marlowe,dc=test)."
+  type        = bool
+  default     = true
+}
+
 variable "dex_enabled" {
   description = "Run Dex (:80 behind a proxied <prefix>-dex.<parent_domain> record)."
   type        = bool
@@ -68,6 +74,12 @@ variable "semaphore_web_root" {
 
 variable "ldap_admin_password" {
   description = "OpenLDAP admin (cn=admin,dc=bookwright,dc=test) password, also Semaphore's LDAP bind password."
+  type        = string
+  sensitive   = true
+}
+
+variable "ldap2_admin_password" {
+  description = "Admin (cn=admin,dc=marlowe,dc=test) password of the second OpenLDAP, also Semaphore's bind password for it."
   type        = string
   sensitive   = true
 }

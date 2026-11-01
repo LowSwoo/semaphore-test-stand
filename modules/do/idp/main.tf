@@ -1,10 +1,10 @@
-# Identity providers for SSO testing: OpenLDAP, Dex and/or Keycloak on one
+# Identity providers for SSO testing: two OpenLDAPs, Dex and/or Keycloak on one
 # droplet with Docker Compose (templates/idp.yaml.tftpl). They are independent
 # login methods for Semaphore; Dex has no LDAP connector. Caddy on :80 routes
 # the web providers by hostname.
 #
-# The droplet's private IP goes into the Semaphore nodes' config (ldap_server),
-# so replacing it replaces the nodes too.
+# The droplet's private IP goes into the Semaphore nodes' config (the LDAP
+# servers), so replacing it replaces the nodes too.
 resource "digitalocean_tag" "idp" {
   name = "${var.prefix}-idp"
 }
@@ -22,6 +22,7 @@ resource "digitalocean_droplet" "idp" {
 
   user_data = templatefile("${path.module}/templates/idp.yaml.tftpl", {
     ldap_enabled            = var.ldap_enabled
+    ldap2_enabled           = var.ldap2_enabled
     dex_enabled             = var.dex_enabled
     keycloak_enabled        = var.keycloak_enabled
     web_enabled             = local.web_enabled
@@ -29,6 +30,11 @@ resource "digitalocean_droplet" "idp" {
     ldap_bind_dn            = local.ldap_bind_dn
     ldap_admin_password     = var.ldap_admin_password
     ldap_users_ldif         = file("${path.module}/templates/50-bookwright-users.ldif")
+    ldap2_base_dn           = local.ldap2_base_dn
+    ldap2_bind_dn           = local.ldap2_bind_dn
+    ldap2_admin_password    = var.ldap2_admin_password
+    ldap2_port              = local.ldap2_port
+    ldap2_users_ldif        = file("${path.module}/templates/50-marlowe-users.ldif")
     keycloak_hostname       = local.keycloak_hostname
     keycloak_admin_password = var.keycloak_admin_password
     keycloak_realm_json     = local.keycloak_realm_json
@@ -47,8 +53,8 @@ resource "digitalocean_droplet" "idp" {
 
   lifecycle {
     precondition {
-      condition     = var.ldap_enabled || var.dex_enabled || var.keycloak_enabled
-      error_message = "Enable at least one of ldap_enabled, dex_enabled, keycloak_enabled."
+      condition     = var.ldap_enabled || var.ldap2_enabled || var.dex_enabled || var.keycloak_enabled
+      error_message = "Enable at least one of ldap_enabled, ldap2_enabled, dex_enabled, keycloak_enabled."
     }
   }
 }
@@ -93,6 +99,15 @@ resource "digitalocean_firewall" "idp" {
     content {
       protocol         = "tcp"
       port_range       = "389"
+      source_addresses = [var.vpc_ip_range]
+    }
+  }
+
+  dynamic "inbound_rule" {
+    for_each = var.ldap2_enabled ? [1] : []
+    content {
+      protocol         = "tcp"
+      port_range       = tostring(local.ldap2_port)
       source_addresses = [var.vpc_ip_range]
     }
   }

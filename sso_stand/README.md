@@ -1,4 +1,4 @@
-# SSO stand — Semaphore UI with OpenLDAP, Dex and Keycloak
+# SSO stand — Semaphore UI with two OpenLDAPs, Dex and Keycloak
 
 A small stand for testing Semaphore's LDAP and OIDC logins on DigitalOcean. It
 is independent of [`ha_stand`](../ha_stand): own root module, own `.env`, own
@@ -11,7 +11,7 @@ scripts. Both stands build their droplets from the shared modules in
 | ----------- | -------------------------------------------- | -------------------------------------------------- |
 | `ui-1`      | [`semaphore`](../modules/do/semaphore)       | Semaphore Pro on `:80`, no HA block, local tasks   |
 | `postgres`  | [`postgres`](../modules/do/postgres)         | PostgreSQL, VPC only                               |
-| `idp`       | [`idp`](../modules/do/idp)                   | OpenLDAP, Dex and/or Keycloak with Docker Compose  |
+| `idp`       | [`idp`](../modules/do/idp)                   | 2x OpenLDAP, Dex, Keycloak with Docker Compose     |
 
 There is no Redis, load balancer or runner. Semaphore is published as the
 proxied `<name>-ui.<parent_domain>` record, Dex as `<name>-dex.<parent_domain>`,
@@ -28,19 +28,25 @@ default to `true`, at least one must stay on:
 
 ```yaml
 identity_providers:
-  ldap: true      # OpenLDAP + Semaphore's ldap_* settings
+  ldap: true      # OpenLDAP dc=bookwright + Semaphore's ldap_providers.bookwright
+  ldap2: true     # OpenLDAP dc=marlowe    + Semaphore's ldap_providers.marlowe
   dex: true       # Dex + Semaphore's oidc_providers.dex
   keycloak: true  # Keycloak + Semaphore's oidc_providers.keycloak
 ```
 
 | Service  | Image                               | Exposure                                       | Semaphore config                                     |
 | -------- | ----------------------------------- | ---------------------------------------------- | ---------------------------------------------------- |
-| OpenLDAP | `osixia/openldap:1.5.0`             | plain LDAP `:389`, `cluster_ip_range` only     | `ldap_*` (no TLS, bind as `cn=admin`)                |
+| OpenLDAP | `osixia/openldap:1.5.0`             | plain LDAP `:389`, `cluster_ip_range` only     | `ldap_providers.bookwright` (no TLS, bind `cn=admin`)|
+| OpenLDAP | `osixia/openldap:1.5.0`             | plain LDAP `:390`, `cluster_ip_range` only     | `ldap_providers.marlowe` (no TLS, bind `cn=admin`)   |
 | Dex      | `ghcr.io/dexidp/dex:v2.45.1-alpine` | Caddy `:80`, proxied `<name>-dex`, edge only   | `oidc_providers.dex`                                 |
 | Keycloak | `quay.io/keycloak/keycloak:26.4`    | Caddy `:80`, proxied `<name>-kc`, edge only    | `oidc_providers.keycloak`                            |
 
-The three are **independent** login methods for Semaphore: Dex has no LDAP
-connector and authenticates its own static users. Keycloak
+All of them are **independent** login methods for Semaphore. The two
+directories are configured through the multi-provider `ldap_providers` map
+(keys `bookwright`, `marlowe`), not the legacy flat `ldap_*` keys; they have
+different base DNs and disjoint users, so a login against one can never be
+answered by the other. Dex has no LDAP connector and authenticates its own
+static users. Keycloak
 runs in dev mode with its own realm `bookwright` (users, group, client),
 imported from a JSON the `idp` module renders at apply time
 ([`keycloak.tf`](../modules/do/idp/keycloak.tf)). With any OIDC provider on,
@@ -50,25 +56,30 @@ check. The `idp` module builds all these Semaphore settings itself
 (`semaphore_config` output), so issuers, clients and DNs always match the
 droplet.
 
-LDAP and Dex directory, users, client and secrets mirror the integration-tests
-fixtures (`test-environment/profiles/feature-ldap-tls` and
-`feature-oidc-local`), so the tests run against the stand unchanged; Keycloak
-has no fixture, its users are stand values:
+The first directory and Dex (users, client, secrets) mirror the
+integration-tests fixtures (`test-environment/profiles/feature-ldap-tls` and
+`feature-oidc-local`), so the tests run against the stand unchanged; the second
+directory and Keycloak have no fixture, their users are stand values:
 
 | Provider | Login                       | Password                       | Groups   | Purpose                                          |
 | -------- | --------------------------- | ------------------------------ | -------- | ------------------------------------------------ |
 | LDAP     | `ldap.user`                 | `Bookwright-LDAP-42!`          | `devops` | regular directory login                          |
 | LDAP     | `ldap.invalid`              | `Bookwright-LDAP-Invalid-42!`  | `devops` | wrong-password checks                            |
 | LDAP     | `ldap-admin-conflict`       | `Bookwright-LDAP-Conflict-42!` | `devops` | `mail: admin@localhost`, collides with the admin |
+| LDAP 2   | `marlowe.user`              | `Marlowe-LDAP-42!`             | `devops` | regular login against the second directory       |
+| LDAP 2   | `marlowe.ops`               | `Marlowe-LDAP-Ops-42!`         | `devops` | second user of the second directory              |
+| LDAP 2   | `marlowe-admin-conflict`    | `Marlowe-LDAP-Conflict-42!`    | `devops` | `mail: admin@localhost`, collides with the admin |
 | Dex      | `oidc.user@bookwright.test` | `Bookwright-OIDC-42!`          | —        | regular OIDC login                               |
 | Dex      | `admin@localhost`           | `Bookwright-OIDC-Conflict-42!` | —        | collides with the admin by email                 |
 | Keycloak | `kc.user`                   | `Bookwright-KC-42!`            | `devops` | regular OIDC login with groups                   |
 | Keycloak | `kc-admin-conflict`         | `Bookwright-KC-Conflict-42!`   | `devops` | `admin@localhost`, collides with the admin       |
 
-The LDAP base DN is `dc=bookwright,dc=test`, users live under
-`ou=people,dc=bookwright,dc=test`, groups under `ou=groups,dc=bookwright,dc=test`
+The base DNs are `dc=bookwright,dc=test` (`:389`) and `dc=marlowe,dc=test`
+(`:390`); in both, users live under `ou=people,…`, groups under `ou=groups,…`
 (`groupOfUniqueNames`; the image's memberof overlay also gives each member a
-`memberOf` attribute). All directory users are in `cn=devops`.
+`memberOf` attribute) and every user is in `cn=devops`. Admin of each
+directory is `cn=admin,<base dn>` with `ldap_admin_password` /
+`ldap2_admin_password`.
 
 **Groups in Keycloak.** Keycloak has real groups: the realm has a group
 `devops` with every user in it, and the `semaphore` client carries a *Group
@@ -84,7 +95,7 @@ use the admin console `keycloak_admin_url` (`admin` /
 no such field; groups only ever come from connectors), so the Dex entries above
 carry none. Keycloak is the OIDC provider to use for group checks.
 
-The secrets `ldap_admin_password`, `dex_client_secret`,
+The secrets `ldap_admin_password`, `ldap2_admin_password`, `dex_client_secret`,
 `keycloak_client_secret` and `keycloak_admin_password` default to public test
 values in [`do/variables.tf`](do/variables.tf) — not real secrets — and can be
 overridden with the matching `TF_VAR_*`. The Semaphore admin email is always
@@ -94,7 +105,7 @@ overridden with the matching `TF_VAR_*`. The Semaphore admin email is always
 no default, `.env.example` sets beta8.
 
 **Replacing `idp`.** Its private IP is part of the Semaphore node's
-`user_data` (`ldap_server`), so replacing `idp` or toggling a provider replaces
+`user_data` (the LDAP `server` addresses), so replacing `idp` or toggling a provider replaces
 the node too, with a fresh database bootstrap of the admin user.
 
 ## Quick start
@@ -146,10 +157,20 @@ ldapsearch -x -H ldap://<idp private ip>:389 \
   -D 'cn=admin,dc=bookwright,dc=test' -w 'Bookwright-LDAP-Bind-42!' \
   -b 'ou=people,dc=bookwright,dc=test' '(uid=ldap.user)' memberOf
 
-# LDAP login through Semaphore — 204
+# second directory
+ldapsearch -x -H ldap://<idp private ip>:390 \
+  -D 'cn=admin,dc=marlowe,dc=test' -w 'Marlowe-LDAP-Bind-42!' \
+  -b 'ou=people,dc=marlowe,dc=test' '(uid=marlowe.user)'
+
+# LDAP login through Semaphore — 204. With ldap_providers the method names the
+# provider id; check the exact value against the Semaphore build under test
+# (the legacy flat config used "method":"ldap").
 curl -i -X POST https://<name>-ui.<domain>/api/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"auth":"ldap.user","password":"Bookwright-LDAP-42!","method":"ldap"}'
+  -d '{"auth":"ldap.user","password":"Bookwright-LDAP-42!","method":"bookwright"}'
+curl -i -X POST https://<name>-ui.<domain>/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"auth":"marlowe.user","password":"Marlowe-LDAP-42!","method":"marlowe"}'
 
 # Provider failure — 500
 curl -i https://<name>-ui.<domain>/api/auth/oidc/unavailable/login

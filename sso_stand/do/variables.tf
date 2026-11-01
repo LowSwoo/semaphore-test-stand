@@ -116,6 +116,13 @@ variable "ldap_admin_password" {
   sensitive   = true
 }
 
+variable "ldap2_admin_password" {
+  description = "Admin (cn=admin,dc=marlowe,dc=test) password of the second OpenLDAP, also Semaphore's bind password for it. Stand value, no fixture."
+  type        = string
+  default     = "Marlowe-LDAP-Bind-42!"
+  sensitive   = true
+}
+
 variable "dex_client_secret" {
   description = "Secret of the 'semaphore' OIDC client in Dex. Fixture: profiles/feature-oidc-local/dex.yaml."
   type        = string

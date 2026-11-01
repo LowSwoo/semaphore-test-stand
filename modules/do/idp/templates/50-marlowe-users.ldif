@@ -1,0 +1,43 @@
+# Second directory of the SSO stand (ldap2). Stand values, no integration-tests
+# fixture: a different base DN and a disjoint set of users, so a login against
+# one directory can never be satisfied by the other.
+dn: ou=people,dc=marlowe,dc=test
+objectClass: organizationalUnit
+ou: people
+
+dn: uid=marlowe.user,ou=people,dc=marlowe,dc=test
+objectClass: inetOrgPerson
+uid: marlowe.user
+cn: Marlowe Test User
+sn: User
+mail: marlowe.user@marlowe.test
+userPassword: Marlowe-LDAP-42!
+
+dn: uid=marlowe.ops,ou=people,dc=marlowe,dc=test
+objectClass: inetOrgPerson
+uid: marlowe.ops
+cn: Marlowe Ops User
+sn: Ops
+mail: marlowe.ops@marlowe.test
+userPassword: Marlowe-LDAP-Ops-42!
+
+dn: uid=marlowe-admin-conflict,ou=people,dc=marlowe,dc=test
+objectClass: inetOrgPerson
+uid: marlowe-admin-conflict
+cn: Marlowe Local Account Conflict
+sn: Conflict
+mail: admin@localhost
+userPassword: Marlowe-LDAP-Conflict-42!
+
+# Groups. osixia/openldap enables the memberof overlay for groupOfUniqueNames /
+# uniqueMember, so members also get a memberOf attribute pointing here.
+dn: ou=groups,dc=marlowe,dc=test
+objectClass: organizationalUnit
+ou: groups
+
+dn: cn=devops,ou=groups,dc=marlowe,dc=test
+objectClass: groupOfUniqueNames
+cn: devops
+uniqueMember: uid=marlowe.user,ou=people,dc=marlowe,dc=test
+uniqueMember: uid=marlowe.ops,ou=people,dc=marlowe,dc=test
+uniqueMember: uid=marlowe-admin-conflict,ou=people,dc=marlowe,dc=test
