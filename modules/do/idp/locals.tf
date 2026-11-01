@@ -4,7 +4,6 @@ locals {
   ldap_base_dn   = "dc=bookwright,dc=test"
   ldap_bind_dn   = "cn=admin,${local.ldap_base_dn}"
   ldap_search_dn = "ou=people,${local.ldap_base_dn}"
-  ldap_groups_dn = "ou=groups,${local.ldap_base_dn}"
 
   # Dex and Keycloak are reached by the user's browser, so each gets its own
   # proxied hostname; the Semaphore nodes fetch discovery through the same URL,
@@ -40,14 +39,11 @@ locals {
 
   dex_provider = {
     dex = {
-      display_name  = "Bookwright Dex"
-      provider_url  = local.dex_issuer
-      client_id     = "semaphore"
-      client_secret = var.dex_client_secret
-      redirect_url  = "${var.semaphore_web_root}/api/auth/oidc/dex/redirect"
-      # groups: Dex puts the LDAP connector's groups into the id_token only
-      # when asked for; static users have none (Dex limitation).
-      scopes           = ["openid", "profile", "email", "groups"]
+      display_name     = "Bookwright Dex"
+      provider_url     = local.dex_issuer
+      client_id        = "semaphore"
+      client_secret    = var.dex_client_secret
+      redirect_url     = "${var.semaphore_web_root}/api/auth/oidc/dex/redirect"
       username_claim   = "email"
       name_claim       = "email"
       return_via_state = true

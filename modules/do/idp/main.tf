@@ -1,8 +1,7 @@
 # Identity providers for SSO testing: OpenLDAP, Dex and/or Keycloak on one
 # droplet with Docker Compose (templates/idp.yaml.tftpl). They are independent
-# login methods for Semaphore; with LDAP on, Dex also gets an LDAP connector so
-# the directory users (and their groups) can log in through OIDC. Caddy on :80
-# routes the web providers by hostname.
+# login methods for Semaphore; Dex has no LDAP connector. Caddy on :80 routes
+# the web providers by hostname.
 #
 # The droplet's private IP goes into the Semaphore nodes' config (ldap_server),
 # so replacing it replaces the nodes too.
@@ -40,14 +39,9 @@ resource "digitalocean_droplet" "idp" {
       keycloak_hostname = local.keycloak_hostname
     })
     dex_config = templatefile("${path.module}/templates/dex.yaml.tftpl", {
-      issuer              = local.dex_issuer
-      client_secret       = var.dex_client_secret
-      redirect_uri        = "${var.semaphore_web_root}/api/auth/oidc/dex/redirect"
-      ldap_enabled        = var.ldap_enabled
-      ldap_bind_dn        = local.ldap_bind_dn
-      ldap_admin_password = var.ldap_admin_password
-      ldap_search_dn      = local.ldap_search_dn
-      ldap_groups_dn      = local.ldap_groups_dn
+      issuer        = local.dex_issuer
+      client_secret = var.dex_client_secret
+      redirect_uri  = "${var.semaphore_web_root}/api/auth/oidc/dex/redirect"
     })
   })
 

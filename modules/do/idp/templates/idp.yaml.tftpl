@@ -4,9 +4,8 @@
 #   dex      - Dex OIDC provider, behind a proxied Cloudflare record
 #   keycloak - Keycloak OIDC provider (dev mode, realm imported at first start)
 #   proxy    - Caddy on :80 routing dex/keycloak by hostname (Caddyfile.tftpl)
-# They are independent login methods; with LDAP on, Dex additionally has an
-# LDAP connector to the ldap service (dex.yaml.tftpl). Images, directory and
-# users of LDAP and Dex come from the integration-tests fixtures
+# They are independent login methods; Dex has no LDAP connector. Images,
+# directory and users of LDAP and Dex come from the integration-tests fixtures
 # (profiles/feature-ldap-tls, profiles/feature-oidc-local).
 package_update: true
 package_upgrade: false
@@ -48,11 +47,6 @@ write_files:
           image: ghcr.io/dexidp/dex:v2.45.1-alpine
           command: ["dex", "serve", "/etc/dex/config.yaml"]
           restart: unless-stopped
-%{ if ldap_enabled ~}
-          depends_on:
-            ldap:
-              condition: service_healthy
-%{ endif ~}
           volumes:
             - /opt/idp/dex.yaml:/etc/dex/config.yaml:ro
             - dex-data:/var/dex

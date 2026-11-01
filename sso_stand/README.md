@@ -39,9 +39,8 @@ identity_providers:
 | Dex      | `ghcr.io/dexidp/dex:v2.45.1-alpine` | Caddy `:80`, proxied `<name>-dex`, edge only   | `oidc_providers.dex`                                 |
 | Keycloak | `quay.io/keycloak/keycloak:26.4`    | Caddy `:80`, proxied `<name>-kc`, edge only    | `oidc_providers.keycloak`                            |
 
-The three are **independent** login methods for Semaphore. Dex authenticates
-its own static users and, with LDAP on, also offers an LDAP connector to the
-stand's OpenLDAP, so the directory users can log in through OIDC too. Keycloak
+The three are **independent** login methods for Semaphore: Dex has no LDAP
+connector and authenticates its own static users. Keycloak
 runs in dev mode with its own realm `bookwright` (users, group, client),
 imported from a JSON the `idp` module renders at apply time
 ([`keycloak.tf`](../modules/do/idp/keycloak.tf)). With any OIDC provider on,
@@ -81,12 +80,9 @@ sits on the client, so the default scopes already deliver the claim and
 use the admin console `keycloak_admin_url` (`admin` /
 `TF_VAR_keycloak_admin_password`, default `Bookwright-KC-Admin-42!`).
 
-**Groups in Dex.** Dex has no groups for static users, so the Dex entries above
-carry none. Groups only come through the LDAP connector: on the Dex login page
-pick *Bookwright LDAP* and sign in with the `uid` and password of a directory
-user — the id_token then has `groups: ["devops"]`. `oidc_providers.dex` asks
-for the `groups` scope for that. The connector talks to the `ldap` service over
-the compose network, so it only exists with both providers on.
+**Groups in Dex.** Dex has no groups for static users (`staticPasswords` has
+no such field; groups only ever come from connectors), so the Dex entries above
+carry none. Keycloak is the OIDC provider to use for group checks.
 
 The secrets `ldap_admin_password`, `dex_client_secret`,
 `keycloak_client_secret` and `keycloak_admin_password` default to public test
@@ -160,11 +156,9 @@ curl -i https://<name>-ui.<domain>/api/auth/oidc/unavailable/login
 ```
 
 Dex login is checked in a browser: the login page of `semaphore_url` shows a
-"Bookwright Dex" button that redirects to Dex. With LDAP on, Dex first asks to
-choose between *Log in with Email* (static users) and *Bookwright LDAP*. Sign
-in as `oidc.user@bookwright.test` / `Bookwright-OIDC-42!` and Dex returns you
-to Semaphore logged in (`skipApprovalScreen` is on). For a login with groups
-take *Bookwright LDAP* and `ldap.user` / `Bookwright-LDAP-42!`.
+"Bookwright Dex" button that redirects to Dex; sign in as
+`oidc.user@bookwright.test` / `Bookwright-OIDC-42!` and Dex returns you to
+Semaphore logged in (`skipApprovalScreen` is on).
 
 Keycloak login likewise: the "Bookwright Keycloak" button, then `kc.user` /
 `Bookwright-KC-42!` on the Keycloak page. To see the claim without Semaphore,
