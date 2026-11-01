@@ -1,0 +1,22 @@
+# Routes :80 of the idp droplet by hostname; TLS is Cloudflare's job.
+{
+	auto_https off
+	admin off
+}
+%{ if dex_enabled ~}
+
+http://${dex_hostname} {
+	reverse_proxy dex:5556
+}
+%{ endif ~}
+%{ if keycloak_enabled ~}
+
+http://${keycloak_hostname} {
+	reverse_proxy keycloak:8080 {
+		# Everything arrives through the Cloudflare edge over https; Caddy would
+		# otherwise report its own plain-http hop and Keycloak would build
+		# http:// URLs.
+		header_up X-Forwarded-Proto https
+	}
+}
+%{ endif ~}

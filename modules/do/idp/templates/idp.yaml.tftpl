@@ -1,9 +1,12 @@
 #cloud-config
 # Identity providers of the SSO stand, run with Docker Compose on one droplet:
-#   ldap - OpenLDAP (plain LDAP :389, reachable from the VPC only, see main.tf)
-#   dex  - Dex OIDC provider, published on :80 behind a proxied Cloudflare record
-# The two are independent login methods; Dex has no LDAP connector. Images,
-# directory and users come from the integration-tests fixtures
+#   ldap     - OpenLDAP (plain LDAP :389, reachable from the VPC only, see main.tf)
+#   dex      - Dex OIDC provider, behind a proxied Cloudflare record
+#   keycloak - Keycloak OIDC provider (dev mode, realm imported at first start)
+#   proxy    - Caddy on :80 routing dex/keycloak by hostname (Caddyfile.tftpl)
+# They are independent login methods; with LDAP on, Dex additionally has an
+# LDAP connector to the ldap service (dex.yaml.tftpl). Images, directory and
+# users of LDAP and Dex come from the integration-tests fixtures
 # (profiles/feature-ldap-tls, profiles/feature-oidc-local).
 package_update: true
 package_upgrade: false
@@ -45,8 +48,11 @@ write_files:
           image: ghcr.io/dexidp/dex:v2.45.1-alpine
           command: ["dex", "serve", "/etc/dex/config.yaml"]
           restart: unless-stopped
-          ports:
-            - "80:5556"
+%{ if ldap_enabled ~}
+          depends_on:
+            ldap:
+              condition: service_healthy
+%{ endif ~}
           volumes:
             - /opt/idp/dex.yaml:/etc/dex/config.yaml:ro
             - dex-data:/var/dex
@@ -56,6 +62,47 @@ write_files:
             timeout: 2s
             retries: 30
 %{ endif ~}
+%{ if keycloak_enabled ~}
+        keycloak:
+          image: quay.io/keycloak/keycloak:26.4
+          command: ["start-dev", "--import-realm"]
+          restart: unless-stopped
+          environment:
+            KC_BOOTSTRAP_ADMIN_USERNAME: admin
+            KC_BOOTSTRAP_ADMIN_PASSWORD: "${keycloak_admin_password}"
+            # Public URL; Caddy forwards X-Forwarded-Proto https from the edge.
+            KC_HOSTNAME: https://${keycloak_hostname}
+            KC_HTTP_ENABLED: "true"
+            KC_PROXY_HEADERS: xforwarded
+            KC_HEALTH_ENABLED: "true"
+          volumes:
+            - /opt/idp/keycloak/bookwright-realm.json:/opt/keycloak/data/import/bookwright-realm.json:ro
+            # Whole data dir, not data/h2: the volume inherits the image's
+            # keycloak-owned mode only for a path that exists in the image;
+            # a fresh mount point is created root-owned and uid 1000 cannot
+            # write the H2 files.
+            - keycloak-data:/opt/keycloak/data
+          healthcheck:
+            # The image has bash but no curl/wget; management port 9000.
+            test:
+              - CMD
+              - bash
+              - -c
+              - exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\r\n\r\n' >&3 && read -r -d '' r <&3; [[ "$$r" == *'"UP"'* ]]
+            interval: 5s
+            timeout: 5s
+            start_period: 180s
+            retries: 60
+%{ endif ~}
+%{ if web_enabled ~}
+        proxy:
+          image: caddy:2-alpine
+          restart: unless-stopped
+          ports:
+            - "80:80"
+          volumes:
+            - /opt/idp/Caddyfile:/etc/caddy/Caddyfile:ro
+%{ endif ~}
       volumes:
 %{ if ldap_enabled ~}
         ldap-data:
@@ -63,6 +110,9 @@ write_files:
 %{ endif ~}
 %{ if dex_enabled ~}
         dex-data:
+%{ endif ~}
+%{ if keycloak_enabled ~}
+        keycloak-data:
 %{ endif ~}
 %{ if ldap_enabled ~}
   - path: /opt/idp/ldif/50-bookwright-users.ldif
@@ -76,6 +126,19 @@ write_files:
     permissions: "0644"
     content: |
       ${indent(6, dex_config)}
+%{ endif ~}
+%{ if keycloak_enabled ~}
+  - path: /opt/idp/keycloak/bookwright-realm.json
+    # Read by the keycloak user (uid 1000) inside the container.
+    permissions: "0644"
+    content: |
+      ${indent(6, keycloak_realm_json)}
+%{ endif ~}
+%{ if web_enabled ~}
+  - path: /opt/idp/Caddyfile
+    permissions: "0644"
+    content: |
+      ${indent(6, caddyfile)}
 %{ endif ~}
 
 runcmd:

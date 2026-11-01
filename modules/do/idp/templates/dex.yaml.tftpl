@@ -1,8 +1,11 @@
 # Dex for the SSO stand. Mirrors the integration-tests fixture
 # test-environment/profiles/feature-oidc-local/dex.yaml: same client and static
 # users (bcrypt hashes of the passwords in SemaphoreOidcFixtures.java). Only the
-# issuer and the redirect URI point at the stand. No connectors: Dex is a login
-# method of its own and is deliberately not wired to the stand's OpenLDAP.
+# issuer and the redirect URI point at the stand.
+#
+# Static users cannot carry groups (Dex has no such field), so with OpenLDAP on
+# Dex also gets an LDAP connector to the stand's directory: ldap.user & co. log
+# in through Dex with the groups claim filled from ou=groups (cn=devops).
 issuer: ${issuer}
 
 storage:
@@ -33,3 +36,31 @@ staticPasswords:
     hash: $2y$10$KoyJAV23DRbseGM7J5zN6ud0m1Ug1f5ZHwkBG5mfQ.MHAGng/6w.W
     username: admin@localhost
     userID: fa0d5bc1-9ccb-43f2-a140-d983bb9751c3
+%{ if ldap_enabled ~}
+
+# "ldap" is the compose service name; both containers share the compose network.
+connectors:
+  - type: ldap
+    id: ldap
+    name: Bookwright LDAP
+    config:
+      host: ldap:389
+      insecureNoSSL: true
+      bindDN: ${ldap_bind_dn}
+      bindPW: "${ldap_admin_password}"
+      usernamePrompt: LDAP login (uid)
+      userSearch:
+        baseDN: ${ldap_search_dn}
+        filter: "(objectClass=inetOrgPerson)"
+        username: uid
+        idAttr: DN
+        emailAttr: mail
+        nameAttr: cn
+      groupSearch:
+        baseDN: ${ldap_groups_dn}
+        filter: "(objectClass=groupOfUniqueNames)"
+        userMatchers:
+          - userAttr: DN
+            groupAttr: uniqueMember
+        nameAttr: cn
+%{ endif ~}

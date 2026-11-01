@@ -1,5 +1,6 @@
 # SSO stand: one Semaphore node with PostgreSQL and an idp droplet running
-# OpenLDAP and Dex, built from the same modules as ha_stand (modules/do/*).
+# OpenLDAP, Dex and Keycloak, built from the same modules as ha_stand
+# (modules/do/*).
 # No Redis/HA, no load balancer, no runners.
 
 module "postgres" {
@@ -21,9 +22,10 @@ module "postgres" {
 module "idp" {
   source = "../../modules/do/idp"
 
-  prefix       = local.prefix
-  ldap_enabled = local.ldap_enabled
-  dex_enabled  = local.dex_enabled
+  prefix           = local.prefix
+  ldap_enabled     = local.ldap_enabled
+  dex_enabled      = local.dex_enabled
+  keycloak_enabled = local.keycloak_enabled
 
   image        = var.image
   size         = var.size
@@ -33,11 +35,13 @@ module "idp" {
   ssh_keys     = [data.digitalocean_ssh_key.default.id]
   tags         = [digitalocean_tag.base.id]
 
-  parent_domain       = var.parent_domain
-  cloudflare_zone_id  = data.cloudflare_zone.parent.id
-  semaphore_web_root  = local.web_root
-  ldap_admin_password = var.ldap_admin_password
-  dex_client_secret   = var.dex_client_secret
+  parent_domain           = var.parent_domain
+  cloudflare_zone_id      = data.cloudflare_zone.parent.id
+  semaphore_web_root      = local.web_root
+  ldap_admin_password     = var.ldap_admin_password
+  dex_client_secret       = var.dex_client_secret
+  keycloak_admin_password = var.keycloak_admin_password
+  keycloak_client_secret  = var.keycloak_client_secret
 }
 
 # Port 80 because Cloudflare proxies HTTPS :443 to plain HTTP :80 on the origin

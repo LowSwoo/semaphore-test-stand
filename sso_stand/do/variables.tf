@@ -11,7 +11,7 @@ variable "cloudflare_api_token" {
 }
 
 variable "parent_domain" {
-  description = "Parent domain hosted in Cloudflare (e.g. semaphoreui.dev). Semaphore is published as '<prefix>-ui.<parent_domain>', Dex as '<prefix>-dex.<parent_domain>'."
+  description = "Parent domain hosted in Cloudflare (e.g. semaphoreui.dev). Semaphore is published as '<prefix>-ui.<parent_domain>', Dex as '<prefix>-dex.<parent_domain>', Keycloak as '<prefix>-kc.<parent_domain>'."
   type        = string
 }
 
@@ -120,5 +120,21 @@ variable "dex_client_secret" {
   description = "Secret of the 'semaphore' OIDC client in Dex. Fixture: profiles/feature-oidc-local/dex.yaml."
   type        = string
   default     = "semaphore-test-client-secret"
+  sensitive   = true
+}
+
+# Keycloak has no integration-tests profile; these are stand values.
+
+variable "keycloak_admin_password" {
+  description = "Password of the Keycloak bootstrap admin (master realm, login 'admin')."
+  type        = string
+  default     = "Bookwright-KC-Admin-42!"
+  sensitive   = true
+}
+
+variable "keycloak_client_secret" {
+  description = "Secret of the 'semaphore' OIDC client in the Keycloak realm 'bookwright'."
+  type        = string
+  default     = "semaphore-keycloak-client-secret"
   sensitive   = true
 }

@@ -21,3 +21,13 @@ output "semaphore_config" {
   value       = local.semaphore_config
   sensitive   = true
 }
+
+output "keycloak_issuer" {
+  description = "Keycloak OIDC issuer (= provider_url of oidc_providers.keycloak); null when Keycloak is off."
+  value       = var.keycloak_enabled ? local.keycloak_issuer : null
+}
+
+output "keycloak_admin_url" {
+  description = "Keycloak admin console (login 'admin' / keycloak_admin_password); null when Keycloak is off."
+  value       = var.keycloak_enabled ? "https://${local.keycloak_hostname}/admin/" : null
+}

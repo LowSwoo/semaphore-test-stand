@@ -77,3 +77,21 @@ variable "dex_client_secret" {
   type        = string
   sensitive   = true
 }
+
+variable "keycloak_enabled" {
+  description = "Run Keycloak (:80 behind a proxied <prefix>-kc.<parent_domain> record)."
+  type        = bool
+  default     = true
+}
+
+variable "keycloak_admin_password" {
+  description = "Password of the Keycloak bootstrap admin (master realm, login 'admin')."
+  type        = string
+  sensitive   = true
+}
+
+variable "keycloak_client_secret" {
+  description = "Secret of the 'semaphore' OIDC client in the Keycloak realm."
+  type        = string
+  sensitive   = true
+}

@@ -1,7 +1,8 @@
 # Public hostname of the Semaphore node, served through the Cloudflare proxy:
 # TLS terminates at the edge, the origin is plain HTTP :80. Flat
 # '<prefix>-ui.<parent_domain>' because the universal certificate covers only
-# first-level subdomains. Dex gets '<prefix>-dex' from modules/do/idp.
+# first-level subdomains. Dex and Keycloak get '<prefix>-dex' / '<prefix>-kc'
+# from modules/do/idp.
 data "cloudflare_zone" "parent" {
   name = var.parent_domain
 }
