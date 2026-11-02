@@ -22,6 +22,14 @@ locals {
       last_name  = "Conflict"
       password   = "Bookwright-KC-Conflict-42!"
     },
+    # Same login and email in every provider of the stand (account matching checks).
+    {
+      username   = "john.user"
+      email      = "john.user@semaphore.test"
+      first_name = "John"
+      last_name  = "User"
+      password   = "John-User-42!"
+    },
   ]
 
   keycloak_groups = ["devops"]

@@ -59,20 +59,27 @@ droplet.
 The first directory and Dex (users, client, secrets) mirror the
 integration-tests fixtures (`test-environment/profiles/feature-ldap-tls` and
 `feature-oidc-local`), so the tests run against the stand unchanged; the second
-directory and Keycloak have no fixture, their users are stand values:
+directory and Keycloak have no fixture, their users are stand values. `john.user`
+is a stand addition present in **every** provider with the same login, email
+and password — for checking how Semaphore matches one external identity coming
+through different providers (`external_auth_email_matching`):
 
 | Provider | Login                       | Password                       | Email                         | Groups   | Purpose                                    |
 | -------- | --------------------------- | ------------------------------ | ----------------------------- | -------- | ------------------------------------------ |
 | LDAP     | `ldap.user`                 | `Bookwright-LDAP-42!`          | `ldap.user@bookwright.test`   | `devops` | regular directory login                    |
 | LDAP     | `ldap.invalid`              | `Bookwright-LDAP-Invalid-42!`  | `ldap.invalid@bookwright.test`| `devops` | wrong-password checks                      |
 | LDAP     | `ldap-admin-conflict`       | `Bookwright-LDAP-Conflict-42!` | `admin@localhost`             | `devops` | collides with the admin by email           |
+| LDAP     | `john.user`                 | `John-User-42!`                | `john.user@semaphore.test`    | `devops` | same identity in every provider            |
 | LDAP 2   | `marlowe.user`              | `Marlowe-LDAP-42!`             | `marlowe.user@marlowe.test`   | `devops` | regular login against the second directory |
 | LDAP 2   | `marlowe.ops`               | `Marlowe-LDAP-Ops-42!`         | `marlowe.ops@marlowe.test`    | `devops` | second user of the second directory        |
 | LDAP 2   | `marlowe-admin-conflict`    | `Marlowe-LDAP-Conflict-42!`    | `admin@localhost`             | `devops` | collides with the admin by email           |
+| LDAP 2   | `john.user`                 | `John-User-42!`                | `john.user@semaphore.test`    | `devops` | same identity in every provider            |
 | Dex      | `oidc.user@bookwright.test` | `Bookwright-OIDC-42!`          | `oidc.user@bookwright.test`   | —        | regular OIDC login                         |
 | Dex      | `admin@localhost`           | `Bookwright-OIDC-Conflict-42!` | `admin@localhost`             | —        | collides with the admin by email           |
+| Dex      | `john.user@semaphore.test`  | `John-User-42!`                | `john.user@semaphore.test`    | —        | same identity in every provider            |
 | Keycloak | `kc.user`                   | `Bookwright-KC-42!`            | `kc.user@bookwright.test`     | `devops` | regular OIDC login with groups             |
 | Keycloak | `kc-admin-conflict`         | `Bookwright-KC-Conflict-42!`   | `admin@localhost`             | `devops` | collides with the admin by email           |
+| Keycloak | `john.user`                 | `John-User-42!`                | `john.user@semaphore.test`    | `devops` | same identity in every provider            |
 
 The base DNs are `dc=bookwright,dc=test` (`:389`) and `dc=marlowe,dc=test`
 (`:390`); in both, users live under `ou=people,…`, groups under `ou=groups,…`

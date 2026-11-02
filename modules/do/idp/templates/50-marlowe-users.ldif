@@ -29,6 +29,15 @@ sn: Conflict
 mail: admin@localhost
 userPassword: Marlowe-LDAP-Conflict-42!
 
+# Same login and email in every provider of the stand (account matching checks).
+dn: uid=john.user,ou=people,dc=marlowe,dc=test
+objectClass: inetOrgPerson
+uid: john.user
+cn: John User
+sn: User
+mail: john.user@semaphore.test
+userPassword: John-User-42!
+
 # Groups. osixia/openldap enables the memberof overlay for groupOfUniqueNames /
 # uniqueMember, so members also get a memberOf attribute pointing here.
 dn: ou=groups,dc=marlowe,dc=test
@@ -41,3 +50,4 @@ cn: devops
 uniqueMember: uid=marlowe.user,ou=people,dc=marlowe,dc=test
 uniqueMember: uid=marlowe.ops,ou=people,dc=marlowe,dc=test
 uniqueMember: uid=marlowe-admin-conflict,ou=people,dc=marlowe,dc=test
+uniqueMember: uid=john.user,ou=people,dc=marlowe,dc=test
