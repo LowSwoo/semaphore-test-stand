@@ -16,6 +16,7 @@ The repo contains following stands and projects:
 | Stand                | Layer          | What it does                                                                                                                           | Docs                                 |
 | -------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | [`ansible_vaults_test_project`](ansible_vaults_test_project)   | Application    | Configures resources *inside* a running Semaphore instance — projects, keys, repositories, inventories, environments, and templates.    | [ansible_vaults_test_project/README.md](ansible_vaults_test_project/README.md) |
+| [`survey_vars_test_project`](survey_vars_test_project)   | Application    | Project with a bash template using survey variables of every type, plus integrations (webhooks) that run it with different values.    | [survey_vars_test_project/README.md](survey_vars_test_project/README.md) |
 | [`ha_stand`](ha_stand)   | Infrastructure | Provisions a complete Semaphore UI *cluster* (load balancer + UI nodes + PostgreSQL + Redis + runners) on DigitalOcean.                  | [ha_stand/README.md](ha_stand/README.md) |
 | [`sso_stand`](sso_stand) | Infrastructure | Provisions one Semaphore UI node + PostgreSQL + an `idp` droplet with OpenLDAP and Dex on DigitalOcean, for LDAP and OIDC login tests. | [sso_stand/README.md](sso_stand/README.md) |
 
@@ -43,6 +44,21 @@ terraform apply
 
 See [ansible_vaults_test_project/README.md](ansible_vaults_test_project/README.md) for obtaining an API token and the full
 list of resources.
+
+## survey_vars_test_project — Survey variables
+
+Creates the `Survey Vars` project with a bash template
+(`survey-vars-all-types/print-vars.sh`) that has survey variables of every type
+(string, integer, secret, enum; required and optional) and prints all received
+values. Five integrations run the same template with different values and auth
+methods; their webhook URLs are exported as the `webhook_urls` output.
+
+```sh
+cd survey_vars_test_project
+cp terraform.tfvars.example terraform.tfvars   # set api_token
+terraform init
+terraform apply
+```
 
 ## ha_stand — Cluster infrastructure
 
@@ -110,6 +126,7 @@ and checks.
 ```
 .
 ├── ansible_vaults_test_project/                 # Semaphore resources via the semaphoreui provider
+├── survey_vars_test_project/                    # survey vars template + integrations
 ├── modules/do/             # shared DigitalOcean modules (+ their cloud-init templates)
 │   ├── postgres/           #   PostgreSQL droplet
 │   ├── redis/              #   Redis Sentinel cluster
@@ -133,7 +150,7 @@ and checks.
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5
-- For `ansible_vaults_test_project`: a reachable Semaphore instance and an API token
+- For `ansible_vaults_test_project` / `survey_vars_test_project`: a reachable Semaphore instance and an API token
 - For `sso_stand`: a DigitalOcean API token and SSH key, a Cloudflare API token
   (DNS edit + zone read) for a zone in SSL mode Flexible, [OpenTofu](https://opentofu.org)
   (the scripts call `tofu`)

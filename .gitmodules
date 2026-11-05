@@ -1,0 +1,3 @@
+[submodule "tests_repo"]
+	path = tests_repo
+	url = git@github.com:semaphoreui/semaphore-test-stand-tests
