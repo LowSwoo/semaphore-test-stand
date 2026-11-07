@@ -67,7 +67,7 @@ write_files:
       Wants=network-online.target
 
       [Service]
-      Envrionment=SEMAPHORE_LOG_LEVEL=debug
+      Environment=SEMAPHORE_LOG_LEVEL=debug
       Type=simple
       User=semaphore
       Group=semaphore
@@ -96,7 +96,7 @@ runcmd:
     done
   - |
     export PGPASSWORD='${db_password}'
-    
+
     if [ "${bootstrap}" = "true" ]; then
       semaphore user add --config /etc/semaphore/config.yml --login "${admin_user}" --name "${admin_user}" --email "${admin_email}" --password "${admin_password}" --admin
     else
