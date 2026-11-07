@@ -51,15 +51,32 @@ variable "db" {
 }
 
 variable "redis" {
-  description = "Redis Sentinel for HA mode; null leaves the ha: block out of config.yml. ha_enabled = false keeps the block but turns HA off."
+  description = <<-EOT
+    Redis for HA mode; null leaves the ha: block out of config.yml. ha_enabled = false keeps the block but turns HA off.
+    engine selects how the nodes find Redis: "redis_sentinel" (default) asks the Sentinels for the master
+    (Semaphore >= 2.20.16-beta5), "redis" connects to the single address `addr` — the only form
+    Semaphore 2.19.x and older understand (they ignore ha.engine and read ha.redis).
+  EOT
   type = object({
     sentinel_addrs    = list(string)
     master_name       = string
     sentinel_password = string
     password          = string
     ha_enabled        = bool
+    engine            = optional(string, "redis_sentinel")
+    addr              = optional(string, "")
   })
   default = null
+
+  validation {
+    condition     = try(contains(["redis", "redis_sentinel"], var.redis.engine), true)
+    error_message = "redis.engine must be \"redis\" or \"redis_sentinel\"."
+  }
+
+  validation {
+    condition     = try(var.redis.engine != "redis" || var.redis.addr != "", true)
+    error_message = "redis.addr (host:port) is required when redis.engine is \"redis\"."
+  }
 }
 
 variable "port" {

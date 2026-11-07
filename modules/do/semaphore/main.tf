@@ -1,6 +1,8 @@
 # Semaphore UI nodes sharing one PostgreSQL database (templates/semaphore-systemd.yaml.tftpl).
-# With `redis` set they form an HA cluster coordinated through Redis Sentinel;
-# without it the ha: block is left out, which only makes sense for node_count = 1.
+# With `redis` set they form an HA cluster coordinated through Redis — via the
+# Sentinels (engine redis_sentinel) or one fixed address (engine redis, for
+# Semaphore 2.19.x); without it the ha: block is left out, which only makes
+# sense for node_count = 1.
 resource "digitalocean_droplet" "node" {
   count    = var.node_count
   name     = "${var.name_prefix}-${count.index + 1}"
@@ -26,6 +28,8 @@ resource "digitalocean_droplet" "node" {
     redis_master_name       = try(var.redis.master_name, "")
     redis_sentinel_password = try(var.redis.sentinel_password, "")
     redis_password          = try(var.redis.password, "")
+    redis_engine            = try(var.redis.engine, "redis_sentinel")
+    redis_addr              = try(var.redis.addr, "")
     ha_enabled              = try(var.redis.ha_enabled, false) ? "true" : "false"
     port                    = var.port
     web_root                = var.web_root

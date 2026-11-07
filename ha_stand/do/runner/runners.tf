@@ -1,5 +1,5 @@
 resource "semaphoreui_runner" "runner" {
-  for_each           = local.config.runners
+  for_each           = local.runners
   name               = each.value.name
   max_parallel_tasks = 10
   active             = true
@@ -8,11 +8,11 @@ resource "semaphoreui_runner" "runner" {
 }
 
 resource "digitalocean_droplet" "runner" {
-  for_each = local.config.runners
+  for_each = local.runners
 
   name     = "runner-${semaphoreui_runner.runner[each.key].id}-${each.value.name}"
   image    = var.image
-  size     = var.size
+  size     = local.runner_size
   region   = var.region
   vpc_uuid = digitalocean_vpc.main.id
 
@@ -38,10 +38,11 @@ resource "digitalocean_droplet" "runner" {
 
   provisioner "file" {
     content = templatefile("${path.module}/../../shared/runner/runner-config.json.tftpl", {
-      web_root             = local.web_root
-      runner_name          = "${local.prefix}-${each.value.name}"
-      tags                 = ["local", "dev"],
-      runner_executor_type = each.value.runner_executor_type
+      web_root               = local.web_root
+      runner_name            = "${local.prefix}-${each.value.name}"
+      tags                   = ["local", "dev"],
+      runner_executor_type   = each.value.runner_executor_type
+      check_interval_seconds = each.value.check_interval_seconds
     })
     destination = "/etc/semaphore/runner-config.json"
   }
@@ -67,8 +68,8 @@ resource "digitalocean_droplet" "runner" {
 
   provisioner "remote-exec" {
     inline = [
-      "curl -o semaphore_${var.semaphore_version}_linux_amd64.tar.gz -L https://github.com/semaphoreui/semaphore/releases/download/v${var.semaphore_version}/semaphore_${var.semaphore_version}_linux_amd64.tar.gz",
-      "tar xf semaphore_${var.semaphore_version}_linux_amd64.tar.gz",
+      "curl -o semaphore_${local.semaphore_version}_linux_amd64.tar.gz -L https://github.com/semaphoreui/semaphore/releases/download/v${local.semaphore_version}/semaphore_${local.semaphore_version}_linux_amd64.tar.gz",
+      "tar xf semaphore_${local.semaphore_version}_linux_amd64.tar.gz",
       "mv semaphore /usr/local/bin/",
 
       "id -u semaphore >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin semaphore",

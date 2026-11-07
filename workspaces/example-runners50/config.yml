@@ -1,0 +1,36 @@
+# ha_stand workspace reproducing a customer report: Semaphore 2.19.17 in HA
+# mode, 3 UI nodes, 50 runners with the job check interval raised from 1s to
+# 5s; the shared PostgreSQL sees 60+ concurrent sessions from the UI nodes.
+# Scenario and measurements: README.md next to this file.
+#
+#   cp -r workspaces/example-runners50 workspaces/runners50   # set subscription_key
+#   cd ha_stand/do && ./up.sh runners50
+
+# Release of the UI nodes and the runners (overrides TF_VAR_semaphore_version).
+semaphore_version: "2.19.17"
+
+subscription_key: "<semaphore pro subscription key>"
+
+# 3 UI nodes behind the load balancer, HA on.
+cluster: 3
+ha_disabled: false
+
+# 2.19.x cannot use Sentinel: the nodes connect straight to redis-1
+# (ha.redis.addr), so a single Redis droplet is enough.
+ha_engine: redis
+redis_nodes: 1
+
+# 50 runners r01..r50, one droplet each.
+runner_count: 50
+runner_name_prefix: r
+runner_executor_type: local
+runner_size: s-1vcpu-2gb
+# runner.check_interval_seconds, raised by the customer from 1 to 5. It only
+# paces the job check (GET /api/internal/runners); the progress report that is
+# also the heartbeat (PUT, same URL) stays at 1s in 2.19.17.
+runner_check_interval_seconds: 5
+
+# VPC ranges; must not overlap the other stands of the account
+# (10.10.12-13.x and 10.10.30.x are taken).
+cluster_ip_range: 10.10.40.0/24
+runners_ip_range: 10.10.41.0/24

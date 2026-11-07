@@ -23,6 +23,8 @@ module "semaphore" {
     sentinel_password = var.redis_sentinel_password
     password          = var.redis_password
     ha_enabled        = !local.config.ha_disabled
+    engine            = local.ha_engine
+    addr              = module.redis.master_addr
   }
 
   web_root              = local.web_root
@@ -32,6 +34,6 @@ module "semaphore" {
   admin_user            = var.semaphore_admin_user
   admin_password        = var.semaphore_admin_password
   admin_email           = var.semaphore_admin_email
-  semaphore_version     = var.semaphore_version
+  semaphore_version     = local.semaphore_version
   subscription_key      = local.config.subscription_key
 }

@@ -65,7 +65,11 @@ ha:
 ```
 
 This requires **Semaphore ≥ 2.20.16-beta5** (first release with the
-`redis_sentinel` engine); `.env.example` pins that version.
+`redis_sentinel` engine); `.env.example` pins that version. Older releases
+(2.19.x) ignore `engine` and read only `ha.redis`: for them set
+`ha_engine: redis` in the workspace `config.yml` and the nodes connect straight
+to redis-1 (`ha.redis.addr`), without failover. `redis_nodes: 1` is then enough
+(see [`workspaces/example-runners50`](../workspaces/example-runners50)).
 
 The cluster shape comes from the workspace `config.yml` (`redis_nodes`,
 `redis_sentinel_quorum`, `redis_master_name`, all optional) and two secrets from
@@ -191,7 +195,23 @@ the destroy would fail before removing a single droplet. For that case:
 ```
 
 `--skip-server` drops the `semaphoreui_runner.*` records from the Terraform
-state and destroys only the DigitalOcean resources. It is implied automatically
+state and destroys only the DigitalOcean resources.
+
+## Watching the database
+
+Two helpers in [`do/`](do) work over SSH on the postgres droplet of a running
+stand (key from `ssh-agent`; they read its address from the `server` outputs
+with `jq`):
+
+```sh
+./db_sessions.sh test1 5      # every 5 s: sessions per UI node, new sessions/s, tps
+./db_latency.sh test1 20ms    # delay PostgreSQL → UI node traffic (tc netem); "off" removes it
+```
+
+`db_sessions.sh` reads `pg_stat_activity` and `pg_stat_database` (connection
+churn shows up as `new/s`); `db_latency.sh` mimics a remote or shared database
+server. They are used by the many-runners scenario in
+[`workspaces/example-runners50`](../workspaces/example-runners50/README.md). It is implied automatically
 when the token object is missing in S3 (checked with the `aws` CLI when it is
 installed). If the server is in fact still alive, the runner records stay
 registered there and have to be removed by hand.

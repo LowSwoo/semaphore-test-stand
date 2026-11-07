@@ -32,6 +32,12 @@ write_files:
       ha:
         enabled: ${ha_enabled}
         node_id: node${node_index}
+%{ if redis_engine == "redis" ~}
+        engine: redis
+        redis:
+          addr: "${redis_addr}"
+          pass: "${redis_password}"
+%{ else ~}
         engine: redis_sentinel
         redis_sentinel:
           master_name: "${redis_master_name}"
@@ -41,6 +47,7 @@ write_files:
       %{~ endfor }
           sentinel_pass: "${redis_sentinel_password}"
           pass: "${redis_password}"
+%{ endif ~}
 %{ endif ~}
       use_remote_runner: ${use_remote_runner}
       subscription:

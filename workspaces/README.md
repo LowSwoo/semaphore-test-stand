@@ -33,6 +33,9 @@ stand), and its name must match the workspace name:
 workspaces/
   example/            # committed template of an ha_stand stand
     config.yml
+  example-runners50/  # ha_stand: 2.19.17 HA + 50 runners, DB session load (see its README.md)
+    config.yml
+    README.md
   example-sso/        # committed template of an sso_stand stand
     config.yml
   <name>/             # one directory per stand, gitignored (may hold secrets)
@@ -72,6 +75,28 @@ setup use `redis_nodes: 3` and `redis_sentinel_quorum: 2`.
 
 Commenting runner entries in or out and re-applying the `runner` module is the
 intended way to scale runners up and down.
+
+Optional keys for other Semaphore releases and for load tests (an absent key
+keeps the behaviour above):
+
+```yaml
+semaphore_version: "2.19.17"       # UI nodes and runners; default TF_VAR_semaphore_version (.env).
+                                   # Quote it: YAML reads 2.20 as a number.
+ha_engine: redis                   # redis_sentinel (default, Semaphore >= 2.20.16-beta5) or redis:
+                                   # ha.redis.addr = redis-1, the only form 2.19.x understands
+
+runner_count: 50                   # generate runners r01..r50 in addition to `runners:` (default 0)
+runner_name_prefix: r              # name prefix of the generated runners (default r)
+runner_executor_type: local        # executor of runners that do not set one (default docker)
+runner_size: s-1vcpu-2gb           # runner droplet size (default s-2vcpu-4gb)
+runner_check_interval_seconds: 5   # runner.check_interval_seconds (Semaphore >= 2.19.16), how often
+                                   # runners ask for jobs; unset = runner default (1s)
+```
+
+With `runner_count` the `runners:` map may be omitted; an entry there with the
+same key as a generated runner overrides it, and any entry can set its own
+`check_interval_seconds`. The runner settings are written when a droplet is
+provisioned, so changing them affects new runners only.
 
 ### Admin token (generated, not stored here)
 

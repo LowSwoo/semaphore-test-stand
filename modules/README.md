@@ -7,7 +7,7 @@ cloud-init template in `templates/`.
 | ------------------------------ | ---------------------- | ----------------------------------------------------------------------- |
 | [`do/postgres`](do/postgres)   | `ha_stand`, `sso_stand` | PostgreSQL droplet listening on the VPC                                 |
 | [`do/redis`](do/redis)         | `ha_stand`             | Redis Sentinel cluster: `redis-1` master + replicas, Sentinel on each   |
-| [`do/semaphore`](do/semaphore) | `ha_stand`, `sso_stand` | Semaphore UI nodes; `redis` adds the `ha:` block, `port` < 1024 adds `CAP_NET_BIND_SERVICE`, `extra_config` appends top-level `config.yml` keys |
+| [`do/semaphore`](do/semaphore) | `ha_stand`, `sso_stand` | Semaphore UI nodes; `redis` adds the `ha:` block (`engine` `redis_sentinel`, or `redis` + `addr` for 2.19.x), `port` < 1024 adds `CAP_NET_BIND_SERVICE`, `extra_config` appends top-level `config.yml` keys |
 | [`do/idp`](do/idp)             | `sso_stand`            | `idp` droplet with OpenLDAP/Dex, its firewall, the `<prefix>-dex` record, and `semaphore_config` for `do/semaphore` |
 
 Networking (VPC, firewalls, tags), the DigitalOcean project and DNS for the UI

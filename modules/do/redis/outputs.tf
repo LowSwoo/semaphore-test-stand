@@ -14,6 +14,11 @@ output "servers" {
   }
 }
 
+output "master_addr" {
+  description = "Data endpoint (host:port) of redis-1, the node that boots as master; for Semaphore's ha.redis.addr (engine redis, no Sentinel)."
+  value       = "${digitalocean_droplet.master.ipv4_address_private}:6379"
+}
+
 output "sentinel_addrs" {
   description = "Sentinel endpoints (host:port), master first."
   value       = local.sentinel_addrs

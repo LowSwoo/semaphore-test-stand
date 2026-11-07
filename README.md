@@ -138,13 +138,15 @@ and checks.
 │   ├── do/                 #   DigitalOcean deployment
 │   │   ├── server/         #     load balancer + UI cluster + Postgres + Redis
 │   │   ├── runner/         #     task runners
-│   │   └── up.sh, down*.sh #     wrapper scripts (take a workspace name)
+│   │   ├── up.sh, down*.sh #     wrapper scripts (take a workspace name)
+│   │   └── db_*.sh         #     PostgreSQL session monitor and latency injection
 │   └── shared/             #   runner cloud-init template and config
 ├── sso_stand/              # SSO stand: Semaphore + Postgres + OpenLDAP/Dex
 │   ├── .env.example
 │   └── do/                 #   root module + up.sh, down.sh
 └── workspaces/             # per-stand config (one dir per Terraform workspace)
     ├── example/            #   template of an ha_stand stand
+    ├── example-runners50/  #   ha_stand: 2.19.17 HA + 50 runners (DB session load)
     └── example-sso/        #   template of an sso_stand stand
 ```
 
