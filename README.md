@@ -16,7 +16,7 @@ The repo contains following stands and projects:
 | Stand                | Layer          | What it does                                                                                                                           | Docs                                 |
 | -------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | [`ansible_vaults_test_project`](ansible_vaults_test_project)   | Application    | Configures resources *inside* a running Semaphore instance — projects, keys, repositories, inventories, environments, and templates.    | [ansible_vaults_test_project/README.md](ansible_vaults_test_project/README.md) |
-| [`survey_vars_test_project`](survey_vars_test_project)   | Application    | Project with a bash template using survey variables of every type, plus integrations (webhooks) that run it with different values.    | [survey_vars_test_project/README.md](survey_vars_test_project/README.md) |
+| [`survey_vars_test_project`](survey_vars_test_project)   | Application    | Project with a bash template using survey variables of every type, plus an integration (webhook) with extractors that runs it.    | [survey_vars_test_project/README.md](survey_vars_test_project/README.md) |
 | [`ha_stand`](ha_stand)   | Infrastructure | Provisions a complete Semaphore UI *cluster* (load balancer + UI nodes + PostgreSQL + Redis + runners) on DigitalOcean.                  | [ha_stand/README.md](ha_stand/README.md) |
 | [`sso_stand`](sso_stand) | Infrastructure | Provisions one Semaphore UI node + PostgreSQL + an `idp` droplet with OpenLDAP and Dex on DigitalOcean, for LDAP and OIDC login tests. | [sso_stand/README.md](sso_stand/README.md) |
 
@@ -50,8 +50,8 @@ list of resources.
 Creates the `Survey Vars` project with a bash template
 (`survey-vars-all-types/print-vars.sh`) that has survey variables of every type
 (string, integer, secret, enum; required and optional) and prints all received
-values. Five integrations run the same template with different values and auth
-methods; their webhook URLs are exported as the `webhook_urls` output.
+values. An integration without auth runs the same template, taking survey values
+from the webhook request via extractors; its URL is the `webhook_url` output.
 
 ```sh
 cd survey_vars_test_project
@@ -127,6 +127,7 @@ and checks.
 .
 ├── ansible_vaults_test_project/                 # Semaphore resources via the semaphoreui provider
 ├── survey_vars_test_project/                    # survey vars template + integrations
+├── tests_repo/                                  # submodule: semaphore-test-stand-tests (playbooks/scripts)
 ├── modules/do/             # shared DigitalOcean modules (+ their cloud-init templates)
 │   ├── postgres/           #   PostgreSQL droplet
 │   ├── redis/              #   Redis Sentinel cluster

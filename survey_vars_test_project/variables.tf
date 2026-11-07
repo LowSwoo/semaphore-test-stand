@@ -15,10 +15,3 @@ variable "api_token" {
   type        = string
   sensitive   = true
 }
-
-variable "webhook_secret" {
-  description = "Shared secret for the token / hmac integrations."
-  type        = string
-  sensitive   = true
-  default     = "fake-webhook-secret"
-}

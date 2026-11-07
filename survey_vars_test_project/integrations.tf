@@ -1,125 +1,72 @@
-# Integrations (incoming webhooks) that run the survey-vars-all-types template.
-# Survey values are supplied via task_params.environment (JSON object).
-# Each integration gets an alias; the webhook URLs are exported as outputs.
+# Integration (incoming webhook, no auth) that runs the survey-vars-all-types
+# template. Survey values are taken from the webhook request by extractors
+# (integration extract values): each extractor writes one survey variable.
+#
+# Example request body:
+#   {
+#     "str_required": "hello",
+#     "str_optional": "optional",
+#     "str_described": "spaces & special chars",
+#     "int_required": 42,
+#     "int_optional": 7,
+#     "secret_required": "s3cr3t",
+#     "enum_required": "staging",
+#     "options": { "color": "green" }
+#   }
+# plus header  X-Secret-Optional: <value>  for secret_optional.
+
+resource "semaphoreui_project_integration" "survey_vars" {
+  project_id  = semaphoreui_project.survey_vars.id
+  template_id = semaphoreui_project_template.survey_vars_all_types.id
+  name        = "survey-vars"
+
+  task_params = {
+    message = "integration: survey vars from webhook"
+  }
+}
+
+resource "semaphoreui_integration_alias" "survey_vars" {
+  project_id     = semaphoreui_project.survey_vars.id
+  integration_id = semaphoreui_project_integration.survey_vars.id
+}
 
 locals {
-  survey_values_all = {
-    str_required    = "from integration"
-    str_optional    = "optional value"
-    str_described   = "spaces & special chars: !@#$%^*()"
-    int_required    = 42
-    int_optional    = 7
-    secret_required = "fake-integration-secret"
-    secret_optional = "fake-optional-secret"
-    enum_required   = "staging"
-    enum_optional   = "green"
-  }
-
-  survey_values_required_only = {
-    str_required    = "required only"
-    int_required    = 1
-    secret_required = "fake-required-secret"
-    enum_required   = "prod"
+  # variable (survey var name) => where to take the value from.
+  #   source = body   -> JSON body, `key` is a gojsonq path (dots for nesting)
+  #   source = header -> HTTP header named `key`
+  survey_extractors = {
+    str_required    = { source = "body", key = "str_required" }
+    str_optional    = { source = "body", key = "str_optional" }
+    str_described   = { source = "body", key = "str_described" }
+    int_required    = { source = "body", key = "int_required" }
+    int_optional    = { source = "body", key = "int_optional" }
+    secret_required = { source = "body", key = "secret_required" }
+    secret_optional = { source = "header", key = "X-Secret-Optional" }
+    enum_required   = { source = "body", key = "enum_required" }
+    enum_optional   = { source = "body", key = "options.color" }
   }
 }
 
-# Key used by the token / hmac integrations to verify incoming requests.
-resource "semaphoreui_project_key" "webhook_secret" {
-  project_id = semaphoreui_project.survey_vars.id
-  name       = "webhook_secret"
+resource "restapi_object" "survey_extractor" {
+  for_each = local.survey_extractors
 
-  login_password = {
-    login    = ""
-    password = var.webhook_secret
-  }
-}
+  path = "/project/${semaphoreui_project.survey_vars.id}/integrations/${semaphoreui_project_integration.survey_vars.id}/values"
 
-# 1. No auth, all survey vars set.
-resource "semaphoreui_project_integration" "all_values" {
-  project_id  = semaphoreui_project.survey_vars.id
-  template_id = semaphoreui_project_template.survey_vars_all_types.id
-  name        = "survey-all-values"
+  data = jsonencode(merge(
+    {
+      integration_id = semaphoreui_project_integration.survey_vars.id
+      name           = each.key
+      value_source   = each.value.source
+      key            = each.value.key
+      variable       = each.key
+      # "environment" puts the value into the task's extra vars, which is where
+      # Semaphore reads survey variable values from.
+      variable_type = "environment"
+    },
+    each.value.source == "body" ? { body_data_type = "json" } : {},
+  ))
 
-  task_params = {
-    message     = "integration: all survey vars"
-    environment = jsonencode(local.survey_values_all)
-  }
-}
-
-# 2. No auth, only required survey vars set (optional ones must be <unset>).
-resource "semaphoreui_project_integration" "required_only" {
-  project_id  = semaphoreui_project.survey_vars.id
-  template_id = semaphoreui_project_template.survey_vars_all_types.id
-  name        = "survey-required-only"
-
-  task_params = {
-    message     = "integration: required survey vars only"
-    environment = jsonencode(local.survey_values_required_only)
-  }
-}
-
-# 3. No auth, no values at all (shows how missing required vars are handled).
-resource "semaphoreui_project_integration" "no_values" {
-  project_id  = semaphoreui_project.survey_vars.id
-  template_id = semaphoreui_project_template.survey_vars_all_types.id
-  name        = "survey-no-values"
-
-  task_params = {
-    message = "integration: no survey vars"
-  }
-}
-
-# 4. Token auth (header value must equal var.webhook_secret), all values.
-resource "semaphoreui_project_integration" "token_auth" {
-  project_id     = semaphoreui_project.survey_vars.id
-  template_id    = semaphoreui_project_template.survey_vars_all_types.id
-  name           = "survey-token-auth"
-  auth_method    = "token"
-  auth_secret_id = semaphoreui_project_key.webhook_secret.id
-  auth_header    = "X-Semaphore-Token"
-
-  task_params = {
-    message     = "integration: token auth"
-    environment = jsonencode(local.survey_values_all)
-  }
-}
-
-# 5. HMAC auth (X-Hub-Signature-256 = sha256 HMAC of body), all values.
-resource "semaphoreui_project_integration" "hmac_auth" {
-  project_id     = semaphoreui_project.survey_vars.id
-  template_id    = semaphoreui_project_template.survey_vars_all_types.id
-  name           = "survey-hmac-auth"
-  auth_method    = "hmac"
-  auth_secret_id = semaphoreui_project_key.webhook_secret.id
-  auth_header    = "X-Hub-Signature-256"
-
-  task_params = {
-    message     = "integration: hmac auth"
-    environment = jsonencode(local.survey_values_all)
-  }
-}
-
-resource "semaphoreui_integration_alias" "all_values" {
-  project_id     = semaphoreui_project.survey_vars.id
-  integration_id = semaphoreui_project_integration.all_values.id
-}
-
-resource "semaphoreui_integration_alias" "required_only" {
-  project_id     = semaphoreui_project.survey_vars.id
-  integration_id = semaphoreui_project_integration.required_only.id
-}
-
-resource "semaphoreui_integration_alias" "no_values" {
-  project_id     = semaphoreui_project.survey_vars.id
-  integration_id = semaphoreui_project_integration.no_values.id
-}
-
-resource "semaphoreui_integration_alias" "token_auth" {
-  project_id     = semaphoreui_project.survey_vars.id
-  integration_id = semaphoreui_project_integration.token_auth.id
-}
-
-resource "semaphoreui_integration_alias" "hmac_auth" {
-  project_id     = semaphoreui_project.survey_vars.id
-  integration_id = semaphoreui_project_integration.hmac_auth.id
+  # The API requires the value ID in the PUT body, which restapi does not send,
+  # so any change recreates the extractor instead of updating it.
+  force_new = ["integration_id", "name", "value_source", "body_data_type", "key", "variable", "variable_type"]
 }
