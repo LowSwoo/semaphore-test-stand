@@ -14,3 +14,4 @@ admin.token
 !*.example
 /workspaces/*/
 !/workspaces/example-*
+terraform.tfstate.d/
