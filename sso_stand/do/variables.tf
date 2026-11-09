@@ -55,6 +55,11 @@ variable "semaphore_size" {
 variable "semaphore_version" {
   description = "Semaphore release (without the leading v). LDAP + OIDC as tested here need >= 2.20.16-beta8."
   type        = string
+
+  validation {
+    condition     = can(regex("^\\d\\.\\d\\d\\.\\d\\d?(-(alpha|beta|rc)\\d+)?$", var.semaphore_version))
+    error_message = "Semaphore version must look like 2.20.16 or 2.20.16-beta8 (without the leading v)."
+  }
 }
 
 variable "db_name" {

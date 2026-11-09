@@ -108,3 +108,8 @@ variable "s3_bucket" {
   type        = string
   default     = ""
 }
+
+variable "admin_token" {
+  type = string
+  default = "missing-admin-token"
+}

@@ -8,9 +8,9 @@ locals {
   # from state instead of asking a dead API to delete them.
   s3_bucket          = var.s3_bucket != "" ? var.s3_bucket : "${local.prefix}-semaphore-stand"
   admin_token_s3_key = "${local.prefix}/admin.token"
-  api_token          = sensitive(var.skip_server ? "missing-admin-token" : trimspace(data.aws_s3_object.admin_token[0].body))
+  api_token          = sensitive(var.skip_server ? var.admin_token : trimspace(data.aws_s3_object.admin_token[0].body))
   web_root           = var.web_root != "" ? var.web_root : "https://${local.prefix}-lb.${var.parent_domain}"
-  api_base_url       = "${local.web_root}/api"
+  api_base_url       = "${trimright(local.web_root, "/")}/api"
   config             = yamldecode(file("${path.module}/../../../workspaces/${local.prefix}/config.yml"))
   no_server          = var.web_root != ""
 
